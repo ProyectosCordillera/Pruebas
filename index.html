@@ -284,27 +284,20 @@
             <!-- FECHA Y FIRMA  -->
             <br />
             De acuerdo con todo lo anterior, firmamos en San José el día
+           <!-- Día -->
             <select id="ddldia" class="dropdown-custom-Dia">
                 <option value="">Día</option>
-                <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-                <option>11</option><option>12</option><option>13</option><option>14</option><option>15</option>
-                <option>16</option><option>17</option><option>18</option><option>19</option><option>20</option>
-                <option>21</option><option>22</option><option>23</option><option>24</option><option>25</option>
-                <option>26</option><option>27</option><option>28</option><option>29</option><option>30</option>
-                <option>31</option>
+                <!-- Se llena dinámicamente con JS -->
             </select>
             del mes de
-            <select id="ddlmes" class="dropdown-custom-Mes">
+           <select id="ddlmes" class="dropdown-custom-Mes">
                 <option value="">Mes</option>
-                <option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option>
-                <option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option>
-                <option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
+                <!-- Se llena dinámicamente con JS -->
             </select>
             de
-            <select id="ddlano" class="dropdown-custom-Ano">
+           <select id="ddlano" class="dropdown-custom-Ano">
                 <option value="">Año</option>
-                <option>2024</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option>
+                <!-- Se llena dinámicamente con JS -->
             </select>.
            <br />
               <br />
@@ -343,38 +336,55 @@
     <!-- Generador de PDF -->
     <script src="js/pdf-generator.js"></script>
 
-    <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Obtener fecha actual
-    const hoy = new Date();
-    const diaActual = hoy.getDate();
-    const mesActual = hoy.getMonth(); // 0 = Enero, 11 = Diciembre
-    const anoActual = hoy.getFullYear();
+  document.addEventListener('DOMContentLoaded', function() {
     
-    // Mapeo de meses en español (coincide con tus options)
-    const mesesEspanol = [
+    // 🔹 Listas con los datos
+    const dias = Array.from({length: 31}, (_, i) => (i + 1).toString());
+    
+    const meses = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
     
-    // Seleccionar día
-    const ddlDia = document.getElementById('ddldia');
-    if (ddlDia) {
-        ddlDia.value = diaActual.toString();
+    const añoActual = new Date().getFullYear();
+    const anios = Array.from({length: 10}, (_, i) => (añoActual - 2 + i).toString()); 
+    // Genera desde (añoActual-2) hasta (añoActual+7), ajusta según necesites
+
+    // 🔹 Función para llenar un select desde un array
+    function llenarSelect(idSelect, opciones, valorPorDefecto = null) {
+        const select = document.getElementById(idSelect);
+        if (!select) return;
+        
+        // Conservar la primera opción (placeholder)
+        const placeholder = select.firstElementChild;
+        select.innerHTML = '';
+        if (placeholder) select.appendChild(placeholder);
+        
+        // Agregar opciones
+        opciones.forEach(opcion => {
+            const option = document.createElement('option');
+            option.value = opcion;
+            option.textContent = opcion;
+            select.appendChild(option);
+        });
+        
+        // Seleccionar valor por defecto si existe
+        if (valorPorDefecto !== null && select.querySelector(`option[value="${valorPorDefecto}"]`)) {
+            select.value = valorPorDefecto;
+        }
     }
-    
-    // Seleccionar mes
-    const ddlMes = document.getElementById('ddlmes');
-    if (ddlMes) {
-        ddlMes.value = mesesEspanol[mesActual];
-    }
-    
-    // Seleccionar año
-    const ddlAno = document.getElementById('ddlano');
-    if (ddlAno) {
-        ddlAno.value = anoActual.toString();
-    }
+
+    // 🔹 Obtener fecha actual
+    const hoy = new Date();
+    const diaHoy = hoy.getDate().toString();
+    const mesHoy = meses[hoy.getMonth()]; // 0 = Enero
+    const anoHoy = hoy.getFullYear().toString();
+
+    // 🔹 Llenar dropdowns y seleccionar fecha actual
+    llenarSelect('ddldia', dias, diaHoy);
+    llenarSelect('ddlmes', meses, mesHoy);
+    llenarSelect('ddlano', anios, anoHoy);
+
 });
-</script>
 </body>
 </html>
