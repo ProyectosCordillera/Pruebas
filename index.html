@@ -342,5 +342,39 @@
     
     <!-- Generador de PDF -->
     <script src="js/pdf-generator.js"></script>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener fecha actual
+    const hoy = new Date();
+    const diaActual = hoy.getDate();
+    const mesActual = hoy.getMonth(); // 0 = Enero, 11 = Diciembre
+    const anoActual = hoy.getFullYear();
+    
+    // Mapeo de meses en español (coincide con tus options)
+    const mesesEspanol = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    // Seleccionar día
+    const ddlDia = document.getElementById('ddldia');
+    if (ddlDia) {
+        ddlDia.value = diaActual.toString();
+    }
+    
+    // Seleccionar mes
+    const ddlMes = document.getElementById('ddlmes');
+    if (ddlMes) {
+        ddlMes.value = mesesEspanol[mesActual];
+    }
+    
+    // Seleccionar año
+    const ddlAno = document.getElementById('ddlano');
+    if (ddlAno) {
+        ddlAno.value = anoActual.toString();
+    }
+});
+</script>
 </body>
 </html>
