@@ -336,55 +336,6 @@
     <!-- Generador de PDF -->
     <script src="js/pdf-generator.js"></script>
 
-  document.addEventListener('DOMContentLoaded', function() {
-    
-    // 🔹 Listas con los datos
-    const dias = Array.from({length: 31}, (_, i) => (i + 1).toString());
-    
-    const meses = [
-        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    
-    const añoActual = new Date().getFullYear();
-    const anios = Array.from({length: 10}, (_, i) => (añoActual - 2 + i).toString()); 
-    // Genera desde (añoActual-2) hasta (añoActual+7), ajusta según necesites
 
-    // 🔹 Función para llenar un select desde un array
-    function llenarSelect(idSelect, opciones, valorPorDefecto = null) {
-        const select = document.getElementById(idSelect);
-        if (!select) return;
-        
-        // Conservar la primera opción (placeholder)
-        const placeholder = select.firstElementChild;
-        select.innerHTML = '';
-        if (placeholder) select.appendChild(placeholder);
-        
-        // Agregar opciones
-        opciones.forEach(opcion => {
-            const option = document.createElement('option');
-            option.value = opcion;
-            option.textContent = opcion;
-            select.appendChild(option);
-        });
-        
-        // Seleccionar valor por defecto si existe
-        if (valorPorDefecto !== null && select.querySelector(`option[value="${valorPorDefecto}"]`)) {
-            select.value = valorPorDefecto;
-        }
-    }
-
-    // 🔹 Obtener fecha actual
-    const hoy = new Date();
-    const diaHoy = hoy.getDate().toString();
-    const mesHoy = meses[hoy.getMonth()]; // 0 = Enero
-    const anoHoy = hoy.getFullYear().toString();
-
-    // 🔹 Llenar dropdowns y seleccionar fecha actual
-    llenarSelect('ddldia', dias, diaHoy);
-    llenarSelect('ddlmes', meses, mesHoy);
-    llenarSelect('ddlano', anios, anoHoy);
-
-});
 </body>
 </html>
