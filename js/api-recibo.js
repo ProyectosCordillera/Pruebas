@@ -18,7 +18,7 @@ async function getReciboApiBase() {
 
     for (const url of API_RECIBO_URLS) {
         try {
-            const res = await fetch(url, { method: 'GET', mode: 'cors' });
+           const res = await fetch(`${url}/listar`, { method: 'GET', mode: 'cors' });
             if (res.ok) {
                 API_RECIBO_BASE = url;
                 console.log('✅ API Recibo:', url);
