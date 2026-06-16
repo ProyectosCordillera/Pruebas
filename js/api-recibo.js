@@ -8,8 +8,6 @@ const API_RECIBO_URLS = [
     'http://192.168.1.69:8081/api/reciboreservas'
 ];
 
-
-
 let API_RECIBO_BASE = null;
 
 // --------------------------------------------
@@ -20,13 +18,15 @@ async function getReciboApiBase() {
 
     for (const url of API_RECIBO_URLS) {
         try {
-           const res = await fetch(`${url}/listar`, { method: 'GET', mode: 'cors' });
+            const res = await fetch(url, { method: 'GET', mode: 'cors' });
             if (res.ok) {
                 API_RECIBO_BASE = url;
                 console.log('✅ API Recibo:', url);
                 return url;
             }
-        } catch {}
+        } catch (err) {
+            console.warn(`❌ Falló: ${url}`, err);
+        }
     }
 
     throw new Error('❌ No hay conexión con API Recibo');
@@ -71,7 +71,7 @@ const ReciboAPI = {
     async listar() {
         const baseUrl = await getReciboApiBase();
 
-        const response = await fetch(`${baseUrl}/listar`);
+        const response = await fetch(baseUrl);
 
         if (!response.ok) {
             throw new Error('Error listando');
