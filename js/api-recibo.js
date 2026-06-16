@@ -8,6 +8,19 @@ const API_RECIBO_URLS = [
     'https://192.168.1.69/api-casas/api/recibo'
 ];
 
+// Lista de URLs a intentar en orden de prioridad
+const API_URLS = [
+    // 1. Dominio DuckDNS + Puerto 8080 (HTTP)
+    'http://pcordillera.duckdns.org:8080/api-casas/api/casas', 
+    
+    // 2. IP directa + Puerto 8080 (HTTP)
+    'http://170.84.108.45:8081/api-casas/api/casas',
+    
+    // 3. Local + Puerto 8080 (HTTP)
+    'http://192.168.1.69:8081/api-casas/api/casas'
+];
+
+
 let API_RECIBO_BASE = null;
 
 // --------------------------------------------
