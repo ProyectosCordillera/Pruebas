@@ -94,6 +94,19 @@
     .btn-action i {
         vertical-align: middle;
     }
+    
+    /* ✅ NUEVO: Estilo para modo visualización */
+    .modo-visualizacion input,
+    .modo-visualizacion select,
+    .modo-visualizacion textarea {
+        background-color: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        color: #495057 !important;
+    }
+    
+    .modo-visualizacion .navbar {
+        background-color: #6c757d !important; /* Gris para indicar modo lectura */
+    }
 </style>
 
     <!-- Modal: Consultar Recibos -->
@@ -118,16 +131,16 @@
                 <!-- Tabla de recibos -->
                 <div class="table-responsive">
                     <table class="table table-hover table-striped align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>#</th>
-                                <th>Cliente</th>
-                                <th>Cédula</th>
-                                <th>Casa</th>
-                                <th>Monto</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        </thead>
+                       <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Cliente</th>
+                                    <th>Cédula</th>
+                                    <th>Casa</th>
+                                    <th>Monto</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
                         <tbody id="tablaRecibos">
                             <tr>
                                 <td colspan="6" class="text-center text-muted">
