@@ -45,7 +45,8 @@ async function getReciboApiBase() {
 const ReciboAPI = {
     async guardar(data) {
         const baseUrl = await getReciboApiBase();
-        const response = await fetch(`${baseUrl}/guardar`, {
+        // ✅ CORREGIDO: quitar "/guardar" del final
+        const response = await fetch(baseUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
