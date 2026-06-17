@@ -3,10 +3,7 @@
 // ============================================
 
 const API_RECIBO_URLS = [
-    // ✅ Puerto 8443 con HTTPS y subruta APIRESERVAPOOL (tu API)
     'https://pcordillera.duckdns.org:8443/APIRESERVAPOOL/api/reciboreservas',
-    
-    // ⚠️ HTTP local (solo si la página es HTTP)
     ...(window.location.protocol === 'http:' ? [
         'http://192.168.1.69:8081/api/reciboreservas'
     ] : [])
@@ -45,13 +42,27 @@ async function getReciboApiBase() {
 const ReciboAPI = {
     async guardar(data) {
         const baseUrl = await getReciboApiBase();
-        // ✅ CORREGIDO: quitar "/guardar" del final
+        console.log('📤 Enviando datos:', data);  // ← Ver qué se envía
+        
         const response = await fetch(baseUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if (!response.ok) throw new Error('Error al guardar');
+        
+        if (!response.ok) {
+            // ✅ Capturar el mensaje de error del servidor
+            let errorMsg = `Error ${response.status}`;
+            try {
+                const errorData = await response.text();
+                console.error('🔴 Respuesta del servidor:', errorData);
+                errorMsg += ': ' + errorData;
+            } catch (e) {
+                console.error('🔴 No se pudo leer el error');
+            }
+            throw new Error(errorMsg);
+        }
+        
         return await response.json();
     },
 
