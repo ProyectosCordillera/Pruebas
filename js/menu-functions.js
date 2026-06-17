@@ -60,27 +60,36 @@ async function guardarRecibo() {
         return;
     }
     
+    // Helper para obtener valores de forma segura
+    const val = (id) => {
+        const el = document.getElementById(id);
+        return el ? (el.value || '') : '';
+    };
+    
+    // ✅ ENVIAR TODOS LOS CAMPOS (incluso vacíos como string vacío)
     const data = {
         nombre: nombre,
-        estadoCivil: document.getElementById('ddlEstado').value,
-        oficio: document.getElementById('txtOficio').value,
-        direccion1: document.getElementById('txtDireccion').value,
-        direccion2: document.getElementById('txtDireccion2').value,
-        nacionalidad: document.getElementById('txtNacionalidad2').value,
-        tipoIdentificacion: document.getElementById('ddlTipoId').value,
+        estadoCivil: val('ddlEstado'),
+        oficio: val('txtOficio'),
+        direccion1: val('txtDireccion'),
+        direccion2: val('txtDireccion2'),
+        nacionalidad: val('txtNacionalidad2'),
+        tipoIdentificacion: val('ddlTipoId'),
         numeroIdentificacion: cedula,
-        celular: document.getElementById('txtCelular').value,
-        telefono2: document.getElementById('txtTelefono2').value,
-        email1: document.getElementById('txtEmail1').value,
-        email2: document.getElementById('txtEmail2').value,
-        montoLetras: document.getElementById('txtMonto').value,
-        montoUSD: document.getElementById('txtMontoUSD').value,
-        numeroCasa: document.getElementById('txtNumeroCasa').value,
-        lote: document.getElementById('txtlote').value,
-        tipoCasa: document.getElementById('ddltipocasa').value,
-        bancoCliente: document.getElementById('txtBancoCliente').value,
-        cuentaCliente: document.getElementById('txtCuentaCliente').value
+        celular: val('txtCelular'),
+        telefono2: val('txtTelefono2'),
+        email1: val('txtEmail1'),
+        email2: val('txtEmail2'),
+        montoLetras: val('txtMonto'),
+        montoUSD: val('txtMontoUSD'),
+        numeroCasa: val('txtNumeroCasa'),
+        lote: val('txtlote'),
+        tipoCasa: val('ddltipocasa'),
+        bancoCliente: val('txtBancoCliente'),
+        cuentaCliente: val('txtCuentaCliente')
     };
+    
+    console.log('📤 Datos a enviar:', data);
     
     try {
         if (window.idEditando) {
@@ -94,6 +103,7 @@ async function guardarRecibo() {
         }
     } catch (err) {
         mostrarToast('❌ Error: ' + err.message, 'danger');
+        console.error('Error completo:', err);
     }
 }
 
