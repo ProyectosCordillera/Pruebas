@@ -143,10 +143,23 @@ async function guardarRecibo() {
     
     try {
         if (window.idEditando) {
-            await ReciboAPI.eliminar(window.idEditando);
-            await ReciboAPI.guardar(data);
-            mostrarToast('✅ Recibo actualizado correctamente', 'success');
-            window.idEditando = null;
+            // ✅ USAR PUT DIRECTAMENTE (no DELETE + POST)
+            data.id = window.idEditando;
+            const baseUrl = await getReciboApiBase();
+            
+            const response = await fetch(`${baseUrl}/${window.idEditando}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok || response.status === 204) {
+                mostrarToast('✅ Recibo actualizado correctamente', 'success');
+                window.idEditando = null;
+            } else {
+                const errorText = await response.text();
+                throw new Error(`Error ${response.status}: ${errorText}`);
+            }
         } else {
             await ReciboAPI.guardar(data);
             mostrarToast('✅ Recibo guardado correctamente', 'success');
