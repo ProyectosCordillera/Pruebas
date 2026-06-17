@@ -1,15 +1,15 @@
 // ============================================
 // VARIABLES GLOBALES
 // ============================================
-let recibosCache = [];
-let idAEliminar = null;
-let idEditando = null;
+// Inicializar en window si no existen
+window.recibosCache = window.recibosCache || [];
+window.idAEliminar = window.idAEliminar || null;
+window.idEditando = window.idEditando || null;
 
 // ============================================
 // 🔔 NOTIFICACIONES AMIGABLES (TOASTS)
 // ============================================
 function mostrarToast(mensaje, tipo = 'success') {
-    // Crear el contenedor si no existe
     let contenedor = document.getElementById('toastContainer');
     if (!contenedor) {
         contenedor = document.createElement('div');
@@ -44,7 +44,6 @@ function mostrarToast(mensaje, tipo = 'success') {
     const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
     toast.show();
     
-    // Eliminar del DOM después de ocultarse
     toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
 }
 
@@ -61,7 +60,6 @@ async function guardarRecibo() {
         return;
     }
     
-    // Recolectar datos del formulario
     const data = {
         nombre: nombre,
         estadoCivil: document.getElementById('ddlEstado').value,
@@ -85,15 +83,11 @@ async function guardarRecibo() {
     };
     
     try {
-        // Verificar si estamos editando o creando
-        if (idEditando) {
-            // TODO: Si tu API soporta PUT, usa esto:
-            // await ReciboAPI.actualizar(idEditando, data);
-            // Por ahora, eliminamos y creamos uno nuevo
-            await ReciboAPI.eliminar(idEditando);
+        if (window.idEditando) {
+            await ReciboAPI.eliminar(window.idEditando);
             await ReciboAPI.guardar(data);
             mostrarToast('✅ Recibo actualizado correctamente', 'success');
-            idEditando = null;
+            window.idEditando = null;
         } else {
             await ReciboAPI.guardar(data);
             mostrarToast('✅ Recibo guardado correctamente', 'success');
@@ -107,14 +101,13 @@ async function guardarRecibo() {
 // 🆕 NUEVO RECIBO
 // ============================================
 function nuevoRecibo() {
-    // Verificar si hay datos sin guardar
     const nombre = document.getElementById('txtNombre').value.trim();
     if (nombre && !confirm('¿Desea crear un nuevo recibo? Se perderán los datos actuales.')) {
         return;
     }
     
     resetForm();
-    idEditando = null;
+    window.idEditando = null;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     mostrarToast('📝 Formulario listo para nuevo recibo', 'info');
 }
@@ -133,8 +126,8 @@ async function abrirConsulta() {
         </td></tr>`;
     
     try {
-        recibosCache = await ReciboAPI.listar();
-        renderizarRecibos(recibosCache);
+        window.recibosCache = await ReciboAPI.listar();
+        renderizarRecibos(window.recibosCache);
     } catch (err) {
         document.getElementById('tablaRecibos').innerHTML = `
             <tr><td colspan="6" class="text-center text-danger py-4">
@@ -186,7 +179,7 @@ function renderizarRecibos(lista) {
 // ============================================
 function filtrarRecibos() {
     const texto = document.getElementById('buscarRecibo').value.toLowerCase();
-    const filtrados = recibosCache.filter(r => 
+    const filtrados = window.recibosCache.filter(r => 
         (r.nombre || '').toLowerCase().includes(texto) ||
         (r.numeroIdentificacion || '').toLowerCase().includes(texto) ||
         (r.numeroCasa || '').toString().includes(texto)
@@ -201,7 +194,6 @@ async function editarRecibo(id) {
     try {
         const r = await ReciboAPI.obtener(id);
         
-        // Llenar el formulario
         document.getElementById('txtNombre').value = r.nombre || '';
         document.getElementById('ddlEstado').value = r.estadoCivil || '';
         document.getElementById('txtOficio').value = r.oficio || '';
@@ -222,10 +214,8 @@ async function editarRecibo(id) {
         document.getElementById('txtBancoCliente').value = r.bancoCliente || '';
         document.getElementById('txtCuentaCliente').value = r.cuentaCliente || '';
         
-        // Guardar ID para actualizar al guardar
-        idEditando = id;
+        window.idEditando = id;
         
-        // Cerrar modal y scroll arriba
         bootstrap.Modal.getInstance(document.getElementById('modalConsulta')).hide();
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
@@ -239,12 +229,12 @@ async function editarRecibo(id) {
 // 🗑️ CONFIRMAR Y ELIMINAR
 // ============================================
 function confirmarEliminar(id, nombre) {
-    idAEliminar = id;
+    window.idAEliminar = id;
     document.getElementById('reciboEliminarInfo').textContent = `#${id} - ${nombre}`;
     
     const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'), {
-        backdrop: 'static',  // No se cierra al hacer clic fuera
-        keyboard: false      // No se cierra con ESC
+        backdrop: 'static',
+        keyboard: false
     });
     modal.show();
 }
@@ -253,30 +243,27 @@ function confirmarEliminar(id, nombre) {
 // 🎯 INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Botón confirmar eliminación
     document.getElementById('btnConfirmarEliminar').addEventListener('click', async () => {
-        if (!idAEliminar) return;
+        if (!window.idAEliminar) return;
         
         const btn = document.getElementById('btnConfirmarEliminar');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Eliminando...';
         
         try {
-            await ReciboAPI.eliminar(idAEliminar);
+            await ReciboAPI.eliminar(window.idAEliminar);
             mostrarToast('✅ Recibo eliminado', 'success');
             
-            // Actualizar lista
-            recibosCache = recibosCache.filter(r => r.id !== idAEliminar);
-            renderizarRecibos(recibosCache);
+            window.recibosCache = window.recibosCache.filter(r => r.id !== window.idAEliminar);
+            renderizarRecibos(window.recibosCache);
             
             bootstrap.Modal.getInstance(document.getElementById('modalConfirmar')).hide();
             
-            // Si estábamos editando este recibo, limpiar
-            if (idEditando === idAEliminar) {
-                idEditando = null;
+            if (window.idEditando === window.idAEliminar) {
+                window.idEditando = null;
             }
             
-            idAEliminar = null;
+            window.idAEliminar = null;
         } catch (err) {
             mostrarToast('❌ Error al eliminar: ' + err.message, 'danger');
         } finally {
@@ -285,24 +272,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Atajos de teclado
     document.addEventListener('keydown', (e) => {
-        // Ctrl+S = Guardar
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             guardarRecibo();
         }
-        // Ctrl+P = Imprimir
         if (e.ctrlKey && e.key === 'p') {
             e.preventDefault();
             window.print();
         }
-        // Ctrl+N = Nuevo
         if (e.ctrlKey && e.key === 'n') {
             e.preventDefault();
             nuevoRecibo();
         }
-        // Ctrl+B = Buscar (consultar)
         if (e.ctrlKey && e.key === 'b') {
             e.preventDefault();
             abrirConsulta();
