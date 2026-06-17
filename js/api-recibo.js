@@ -42,7 +42,7 @@ async function getReciboApiBase() {
 const ReciboAPI = {
     async guardar(data) {
         const baseUrl = await getReciboApiBase();
-        console.log('📤 Enviando datos:', data);  // ← Ver qué se envía
+        console.log('📤 Enviando datos:', data);
         
         const response = await fetch(baseUrl, {
             method: 'POST',
@@ -51,7 +51,6 @@ const ReciboAPI = {
         });
         
         if (!response.ok) {
-            // ✅ Capturar el mensaje de error del servidor
             let errorMsg = `Error ${response.status}`;
             try {
                 const errorData = await response.text();
@@ -63,7 +62,13 @@ const ReciboAPI = {
             throw new Error(errorMsg);
         }
         
-        return await response.json();
+        // ✅ Manejar respuesta que puede ser JSON o texto
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch {
+            return { mensaje: text };
+        }
     },
 
     async obtener(id) {
