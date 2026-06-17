@@ -3,15 +3,11 @@
 // ============================================
 
 const API_RECIBO_URLS = [
-    // ✅ HTTPS puerto 443 con subruta APIRESERVAPOOL
-    'https://pcordillera.duckdns.org/APIRESERVAPOOL/api/reciboreservas',
-    
-    // ✅ HTTPS puerto 8443 con subruta APIRESERVAPOOL
+    // ✅ Puerto 8443 con HTTPS y subruta APIRESERVAPOOL (tu API)
     'https://pcordillera.duckdns.org:8443/APIRESERVAPOOL/api/reciboreservas',
     
-    // ⚠️ HTTP puerto 80 con subruta (solo si la página es HTTP)
+    // ⚠️ HTTP local (solo si la página es HTTP)
     ...(window.location.protocol === 'http:' ? [
-        'http://pcordillera.duckdns.org/APIRESERVAPOOL/api/reciboreservas',
         'http://192.168.1.69:8081/api/reciboreservas'
     ] : [])
 ];
