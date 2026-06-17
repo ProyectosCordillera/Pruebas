@@ -1,200 +1,117 @@
 // ============================================
-// VARIABLES GLOBALES
+// FORM-FUNCTIONS.JS
+// Solo funciones del formulario (no del menú)
 // ============================================
-let recibosCache = [];
-let idAEliminar = null;
 
 // ============================================
-// GUARDAR RECIBO
+// 🧹 LIMPIAR FORMULARIO
 // ============================================
-async function guardarRecibo() {
-    const nombre = document.getElementById('txtNombre').value.trim();
-    const cedula = document.getElementById('txtCedula').value.trim();
+function resetForm() {
+    // Limpiar campos de texto
+    const camposTexto = [
+        'txtNombre', 'txtOficio', 'txtDireccion', 'txtDireccion2',
+        'txtNacionalidad2', 'txtCedula', 'txtCelular', 'txtTelefono2',
+        'txtEmail1', 'txtEmail2', 'txtMonto', 'txtMontoUSD',
+        'txtNumeroCasa', 'txtlote', 'txtBancoCliente', 'txtCuentaCliente',
+        'txtDueñoCuenta', 'txtCuentaExterior', 'txtNombreBanco',
+        'txtABA', 'txtSWIFT', 'txtDireccionBanco', 'TextBox0',
+        'txtmonto1', 'TextBox2', 'TextBox3', 'TextBox4', 'txtreduceprecio'
+    ];
     
-    if (!nombre || !cedula) {
-        alert('⚠️ Complete al menos el nombre y la cédula antes de guardar');
-        return;
-    }
-    
-    // Recolectar datos del formulario
-    const data = {
-        nombre: nombre,
-        estadoCivil: document.getElementById('ddlEstado').value,
-        oficio: document.getElementById('txtOficio').value,
-        direccion1: document.getElementById('txtDireccion').value,
-        direccion2: document.getElementById('txtDireccion2').value,
-        nacionalidad: document.getElementById('txtNacionalidad2').value,
-        tipoIdentificacion: document.getElementById('ddlTipoId').value,
-        numeroIdentificacion: cedula,
-        celular: document.getElementById('txtCelular').value,
-        telefono2: document.getElementById('txtTelefono2').value,
-        email1: document.getElementById('txtEmail1').value,
-        email2: document.getElementById('txtEmail2').value,
-        montoLetras: document.getElementById('txtMonto').value,
-        montoUSD: document.getElementById('txtMontoUSD').value,
-        numeroCasa: document.getElementById('txtNumeroCasa').value,
-        lote: document.getElementById('txtlote').value,
-        tipoCasa: document.getElementById('ddltipocasa').value
-    };
-    
-    try {
-        const resultado = await ReciboAPI.guardar(data);
-        alert('✅ Recibo guardado correctamente');
-        console.log('Recibo guardado:', resultado);
-    } catch (err) {
-        alert('❌ Error al guardar: ' + err.message);
-    }
-}
-
-// ============================================
-// NUEVO RECIBO (limpiar y enfocar)
-// ============================================
-function nuevoRecibo() {
-    if (confirm('¿Desea crear un nuevo recibo? Se perderán los datos actuales.')) {
-        resetForm();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-}
-
-// ============================================
-// ABRIR CONSULTA
-// ============================================
-async function abrirConsulta() {
-    const modal = new bootstrap.Modal(document.getElementById('modalConsulta'));
-    modal.show();
-    
-    // Cargar recibos
-    document.getElementById('tablaRecibos').innerHTML = `
-        <tr><td colspan="6" class="text-center text-muted">
-            <i class="bi bi-hourglass-split"></i> Cargando...
-        </td></tr>`;
-    
-    try {
-        recibosCache = await ReciboAPI.listar();
-        renderizarRecibos(recibosCache);
-    } catch (err) {
-        document.getElementById('tablaRecibos').innerHTML = `
-            <tr><td colspan="6" class="text-center text-danger">
-                ❌ Error al cargar: ${err.message}
-            </td></tr>`;
-    }
-}
-
-// ============================================
-// RENDERIZAR TABLA DE RECIBOS
-// ============================================
-function renderizarRecibos(lista) {
-    const tbody = document.getElementById('tablaRecibos');
-    document.getElementById('totalRecibos').textContent = `${lista.length} recibo(s)`;
-    
-    if (lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">
-            No hay recibos para mostrar
-        </td></tr>`;
-        return;
-    }
-    
-    tbody.innerHTML = lista.map(r => `
-        <tr>
-            <td><strong>${r.id}</strong></td>
-            <td>${r.nombre || '-'}</td>
-            <td>${r.numeroIdentificacion || '-'}</td>
-            <td><span class="badge bg-secondary">${r.numeroCasa || '-'}</span></td>
-            <td>$${r.montoUSD || '0'}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary me-1" 
-                        onclick="editarRecibo(${r.id})" title="Editar">
-                    <i class="bi bi-pencil-fill"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger" 
-                        onclick="confirmarEliminar(${r.id}, '${(r.nombre || '').replace(/'/g, "\\'")}')" 
-                        title="Eliminar">
-                    <i class="bi bi-trash-fill"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-// ============================================
-// BUSCAR / FILTRAR
-// ============================================
-function filtrarRecibos() {
-    const texto = document.getElementById('buscarRecibo').value.toLowerCase();
-    const filtrados = recibosCache.filter(r => 
-        (r.nombre || '').toLowerCase().includes(texto) ||
-        (r.numeroIdentificacion || '').toLowerCase().includes(texto) ||
-        (r.numeroCasa || '').toLowerCase().includes(texto)
-    );
-    renderizarRecibos(filtrados);
-}
-
-// ============================================
-// EDITAR RECIBO
-// ============================================
-async function editarRecibo(id) {
-    try {
-        const r = await ReciboAPI.obtener(id);
-        
-        // Llenar el formulario con los datos
-        document.getElementById('txtNombre').value = r.nombre || '';
-        document.getElementById('ddlEstado').value = r.estadoCivil || '';
-        document.getElementById('txtOficio').value = r.oficio || '';
-        document.getElementById('txtDireccion').value = r.direccion1 || '';
-        document.getElementById('txtDireccion2').value = r.direccion2 || '';
-        document.getElementById('txtNacionalidad2').value = r.nacionalidad || '';
-        document.getElementById('ddlTipoId').value = r.tipoIdentificacion || '';
-        document.getElementById('txtCedula').value = r.numeroIdentificacion || '';
-        document.getElementById('txtCelular').value = r.celular || '';
-        document.getElementById('txtTelefono2').value = r.telefono2 || '';
-        document.getElementById('txtEmail1').value = r.email1 || '';
-        document.getElementById('txtEmail2').value = r.email2 || '';
-        document.getElementById('txtMonto').value = r.montoLetras || '';
-        document.getElementById('txtMontoUSD').value = r.montoUSD || '';
-        document.getElementById('txtNumeroCasa').value = r.numeroCasa || '';
-        document.getElementById('txtlote').value = r.lote || '';
-        document.getElementById('ddltipocasa').value = r.tipoCasa || '';
-        
-        // Guardar ID para actualizar (opcional, si tu API soporta PUT)
-        document.getElementById('Hoja1').dataset.editandoId = id;
-        
-        // Cerrar modal y scroll arriba
-        bootstrap.Modal.getInstance(document.getElementById('modalConsulta')).hide();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        alert('✅ Recibo cargado. Modifique los datos y presione Guardar.');
-    } catch (err) {
-        alert('❌ Error al cargar: ' + err.message);
-    }
-}
-
-// ============================================
-// CONFIRMAR Y ELIMINAR
-// ============================================
-function confirmarEliminar(id, nombre) {
-    idAEliminar = id;
-    document.getElementById('reciboEliminarInfo').textContent = `#${id} - ${nombre}`;
-    
-    const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'));
-    modal.show();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnConfirmarEliminar').addEventListener('click', async () => {
-        if (!idAEliminar) return;
-        
-        try {
-            await ReciboAPI.eliminar(idAEliminar);
-            alert('✅ Recibo eliminado');
-            
-            // Recargar lista
-            recibosCache = recibosCache.filter(r => r.id !== idAEliminar);
-            renderizarRecibos(recibosCache);
-            
-            bootstrap.Modal.getInstance(document.getElementById('modalConfirmar')).hide();
-            idAEliminar = null;
-        } catch (err) {
-            alert('❌ Error al eliminar: ' + err.message);
-        }
+    camposTexto.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.value = '';
     });
+    
+    // Resetear selectores a su valor por defecto
+    const selectores = ['ddlEstado', 'ddlTipoId', 'ddltipocasa', 'ddlcasaNumero', 'ddldia', 'ddlmes', 'ddlano'];
+    selectores.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.selectedIndex = 0;
+    });
+    
+    // Resetear campos de fecha
+    const fechas = ['fechaReserva', 'fechaContrato'];
+    fechas.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.value = '';
+    });
+    
+    // Resetear checkbox
+    const chbAplicar = document.getElementById('chbxAplicar');
+    if (chbAplicar) chbAplicar.checked = false;
+    
+    // Ocultar panel de descuento
+    const pnlDescuento = document.getElementById('pnlMensajeDescuento');
+    if (pnlDescuento) pnlDescuento.style.display = 'none';
+    
+    // Resetear número de cuota
+    const numCuota = document.getElementById('txtnumcuota');
+    if (numCuota) numCuota.value = '';
+    
+    console.log('🧹 Formulario limpiado');
+}
+
+// ============================================
+// ➡️ MOVER AL SIGUIENTE CAMPO (conectados)
+// ============================================
+function moveToNext(element, event) {
+    // Si presiona Enter o llena el campo, pasa al siguiente
+    if (event.key === 'Enter' || element.value.length >= element.maxLength) {
+        const inputs = Array.from(document.querySelectorAll('.connected-input'));
+        const index = inputs.indexOf(element);
+        if (index < inputs.length - 1) {
+            inputs[index + 1].focus();
+        }
+    }
+}
+
+// ============================================
+// ⬅️ MOVER AL CAMPO ANTERIOR (conectados)
+// ============================================
+function moveToPrevious(element, event) {
+    // Si presiona Backspace en campo vacío, va al anterior
+    if (event.key === 'Backspace' && element.value.length === 0) {
+        const inputs = Array.from(document.querySelectorAll('.connected-input'));
+        const index = inputs.indexOf(element);
+        if (index > 0) {
+            inputs[index - 1].focus();
+        }
+    }
+}
+
+// ============================================
+// 📅 LLENAR FECHA ACTUAL EN CAMPOS DE FECHA
+// ============================================
+function llenarFechaActual() {
+    const hoy = new Date();
+    const dia = hoy.getDate().toString().padStart(2, '0');
+    const mes = (hoy.getMonth() + 1).toString().padStart(2, '0');
+    const anio = hoy.getFullYear();
+    const fechaISO = `${anio}-${mes}-${dia}`;
+    
+    const fechaReserva = document.getElementById('fechaReserva');
+    if (fechaReserva && !fechaReserva.value) {
+        fechaReserva.value = fechaISO;
+    }
+}
+
+// ============================================
+// 🎯 INICIALIZACIÓN DEL FORMULARIO
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Llenar fecha actual al cargar
+    llenarFechaActual();
+    
+    // Checkbox de descuento
+    const chbAplicar = document.getElementById('chbxAplicar');
+    const pnlDescuento = document.getElementById('pnlMensajeDescuento');
+    
+    if (chbAplicar && pnlDescuento) {
+        chbAplicar.addEventListener('change', function() {
+            pnlDescuento.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    
+    console.log('✅ Formulario inicializado');
 });
