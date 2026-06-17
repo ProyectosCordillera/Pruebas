@@ -337,25 +337,5 @@
     <script src="js/pdf-generator.js"></script>
 <script src="js/api-recibo.js"></script>
 
-
-
-<script>
-    // Prueba automática al cargar la página
-    document.addEventListener("DOMContentLoaded", async () => {
-        try {
-            const data = await ReciboAPI.listar();
-            console.log("✅ Datos recibidos:", data);
-
-            // Mostrar en pantalla
-            const output = document.createElement("pre");
-            output.textContent = JSON.stringify(data, null, 2);
-            document.body.appendChild(output);
-        } catch (err) {
-            console.error("❌ Error al conectar con API Recibo:", err);
-        }
-    });
-</script>
-
-    
 </body>
 </html>
