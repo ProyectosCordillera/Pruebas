@@ -21,6 +21,69 @@
     
     <!-- CSS Personalizado -->
     <link rel="stylesheet" href="css/styles.css">
+
+    <style>
+    /* Forzar eliminación de TODOS los recuadros */
+    input, select, textarea {
+        border: none !important;
+        border-bottom: 1px solid #000 !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        border-radius: 0 !important;
+        padding: 2px 4px !important;
+    }
+    
+    /* Específico para date inputs */
+    input[type="date"] {
+        border: none !important;
+        border-bottom: 1px solid #000 !important;
+        background: transparent !important;
+        -webkit-appearance: none !important;
+    }
+    
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        opacity: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 100%;
+        width: 20px;
+    }
+    
+    /* Para selects */
+    select {
+        border: none !important;
+        border-bottom: 1px solid #000 !important;
+        background: transparent !important;
+        background-image: none !important;
+        -webkit-appearance: none !important;
+    }
+    
+    /* IMPRESIÓN */
+    @media print {
+        * {
+            background: transparent !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+        
+        input, select, textarea {
+            border: none !important;
+            border-bottom: 1px solid #000 !important;
+            background: transparent !important;
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            display: none !important;
+        }
+    }
+</style>
+
 </head>
 <body>
  <!-- Navbar con acciones claras -->
