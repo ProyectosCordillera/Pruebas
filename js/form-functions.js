@@ -7,24 +7,12 @@
 // 🎯 INICIALIZACIÓN PRINCIPAL
 // ============================================
 document.addEventListener('DOMContentLoaded', function () {
-    // Inicializar dropdown de casas
     initCasaDropdown();
-    
-    // Establecer fechas por defecto
     setDefaultDates();
-    
-    // Llenar dropdowns de fecha (día, mes, año)
     llenarDropdownsFecha();
-    
-    // Configurar checkbox de descuento
     setupDiscountCheckbox();
-    
-    // Configurar evento de cambio de casa
     setupCasaChangeHandler();
-    
-    // Replicar valor del dropdown de casa al campo de texto
     setupDropdownReplication('ddlcasaNumero', 'txtNumeroCasa');
-    
     console.log('✅ Formulario inicializado');
 });
 
@@ -59,7 +47,6 @@ function setupDropdownReplication(dropdownId, textboxId) {
             input.value = select.options[select.selectedIndex].text;
         });
         
-        // Inicializar con el valor por defecto si existe
         if (select.selectedIndex >= 0) {
             input.value = select.options[select.selectedIndex].text;
         }
@@ -80,7 +67,6 @@ function setDefaultDates() {
         fechaReserva.value = formattedDate;
     }
     
-    // Fecha de contrato para 7 días después
     const contractDate = new Date();
     contractDate.setDate(today.getDate() + 7);
     
@@ -104,17 +90,14 @@ function llenarDropdownsFecha() {
     const añoActual = new Date().getFullYear();
     const anios = Array.from({length: 10}, (_, i) => (añoActual - 2 + i).toString());
     
-    // Función para llenar un select
     function llenarSelect(idSelect, opciones, valorPorDefecto = null) {
         const select = document.getElementById(idSelect);
         if (!select) return;
         
-        // Conservar la primera opción (placeholder)
         const placeholder = select.firstElementChild;
         select.innerHTML = '';
         if (placeholder) select.appendChild(placeholder);
         
-        // Agregar opciones
         opciones.forEach(opcion => {
             const option = document.createElement('option');
             option.value = opcion;
@@ -122,20 +105,17 @@ function llenarDropdownsFecha() {
             select.appendChild(option);
         });
         
-        // Seleccionar valor por defecto si existe
         if (valorPorDefecto !== null) {
             const optionDefault = select.querySelector(`option[value="${valorPorDefecto}"]`);
             if (optionDefault) select.value = valorPorDefecto;
         }
     }
     
-    // Obtener fecha actual
     const hoy = new Date();
     const diaHoy = hoy.getDate().toString();
     const mesHoy = meses[hoy.getMonth()];
     const anoHoy = hoy.getFullYear().toString();
     
-    // Llenar dropdowns y seleccionar fecha actual
     llenarSelect('ddldia', dias, diaHoy);
     llenarSelect('ddlmes', meses, mesHoy);
     llenarSelect('ddlano', anios, anoHoy);
@@ -154,7 +134,6 @@ function setupDiscountCheckbox() {
         panel.style.display = this.checked ? 'block' : 'none';
     });
     
-    // Inicializar estado del panel
     panel.style.display = checkbox.checked ? 'block' : 'none';
 }
 
@@ -169,17 +148,13 @@ function setupCasaChangeHandler() {
     
     ddlcasaNumero.addEventListener('change', function() {
         var fincaValue = this.value;
-        
-        // Extraer el número del formato "FF-XX"
         var numeroFinca = parseInt(fincaValue.replace('FF-', ''), 10);
         
-        // Validar que sea un número válido
         if (isNaN(numeroFinca)) {
             txtlote.value = "";
             return;
         }
         
-        // Lógica de lotes según número de casa
         if (numeroFinca === 1) {
             txtlote.value = "110 m²";
         } else if (numeroFinca >= 2 && numeroFinca <= 7) {
@@ -203,7 +178,6 @@ function setupCasaChangeHandler() {
         }
     });
     
-    // Si hay un valor preseleccionado, actualizar el lote
     if (ddlcasaNumero.value) {
         ddlcasaNumero.dispatchEvent(new Event('change'));
     }
@@ -214,8 +188,6 @@ function setupCasaChangeHandler() {
 // ============================================
 function moveToNext(currentInput, event) {
     const nextInput = document.getElementById('txtDireccion2');
-    
-    // Solo saltar al siguiente campo cuando se alcanza el máximo de caracteres
     if (currentInput.value.length >= currentInput.maxLength) {
         nextInput.focus();
     }
@@ -226,8 +198,6 @@ function moveToNext(currentInput, event) {
 // ============================================
 function moveToPrevious(currentInput, event) {
     const prevInput = document.getElementById('txtDireccion');
-    
-    // Si se presiona Backspace al inicio del segundo input
     if (event.key === 'Backspace' && currentInput.selectionStart === 0 && currentInput.value === '') {
         event.preventDefault();
         prevInput.focus();
@@ -241,10 +211,8 @@ function moveToPrevious(currentInput, event) {
 // ============================================
 function resetForm() {
     if (confirm('¿Está seguro que desea limpiar todo el formulario? Se perderán todos los datos ingresados.')) {
-        // Limpiar todos los inputs y selects
         document.querySelectorAll('input, select, textarea').forEach(element => {
             if (element.type !== 'checkbox' && element.type !== 'radio') {
-                // No limpiar campos readonly (txtNumeroCasa, txtlote se limpian aparte)
                 if (!element.readOnly) {
                     element.value = '';
                 }
@@ -253,22 +221,17 @@ function resetForm() {
             }
         });
         
-        // Restablecer fechas por defecto
         setDefaultDates();
         
-        // Restablecer panel de descuento
         const panel = document.getElementById('pnlMensajeDescuento');
         if (panel) panel.style.display = 'none';
         
-        // Restablecer campo de lote
         const txtlote = document.getElementById('txtlote');
         if (txtlote) txtlote.value = '';
         
-        // Restablecer campo de número de casa
         const txtNumeroCasa = document.getElementById('txtNumeroCasa');
         if (txtNumeroCasa) txtNumeroCasa.value = '';
         
-        // Resetear dropdown de casa a la primera opción
         const ddlCasa = document.getElementById('ddlcasaNumero');
         if (ddlCasa) ddlCasa.selectedIndex = 0;
         
