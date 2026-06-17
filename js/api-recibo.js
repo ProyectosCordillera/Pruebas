@@ -3,24 +3,21 @@
 // ============================================
 
 const API_RECIBO_URLS = [
-    // ✅ HTTPS en puerto 443 (principal) - SIN Mixed Content
-    'https://pcordillera.duckdns.org/api/reciboreservas',
+    // ✅ HTTPS puerto 443 con subruta APIRESERVAPOOL
+    'https://pcordillera.duckdns.org/APIRESERVAPOOL/api/reciboreservas',
     
-    // ✅ HTTPS en puerto 8443 (alternativo)
-    'https://pcordillera.duckdns.org:8443/api/reciboreservas',
+    // ✅ HTTPS puerto 8443 con subruta APIRESERVAPOOL
+    'https://pcordillera.duckdns.org:8443/APIRESERVAPOOL/api/reciboreservas',
     
-    // ⚠️ HTTP local (solo si la página también es HTTP)
+    // ⚠️ HTTP puerto 80 con subruta (solo si la página es HTTP)
     ...(window.location.protocol === 'http:' ? [
-        'http://192.168.1.69:8081/api/reciboreservas',
-        'http://170.84.108.45:8081/api/reciboreservas'
+        'http://pcordillera.duckdns.org/APIRESERVAPOOL/api/reciboreservas',
+        'http://192.168.1.69:8081/api/reciboreservas'
     ] : [])
 ];
 
 let API_RECIBO_BASE = null;
 
-// --------------------------------------------
-// 🔌 Buscar URL funcional
-// --------------------------------------------
 async function getReciboApiBase() {
     if (API_RECIBO_BASE) return API_RECIBO_BASE;
 
@@ -42,20 +39,13 @@ async function getReciboApiBase() {
                 return url;
             }
         } catch (err) {
-            if (err.name === 'AbortError') {
-                console.warn(`⏱️ Timeout: ${url}`);
-            } else {
-                console.warn(`❌ Falló: ${url} -`, err.message);
-            }
+            console.warn(`❌ Falló: ${url} -`, err.message);
         }
     }
 
-    throw new Error('❌ No hay conexión con API Recibo. Verifica que IIS esté corriendo.');
+    throw new Error('❌ No hay conexión con API Recibo');
 }
 
-// --------------------------------------------
-// 📦 OBJETO PRINCIPAL
-// --------------------------------------------
 const ReciboAPI = {
     async guardar(data) {
         const baseUrl = await getReciboApiBase();
