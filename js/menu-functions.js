@@ -60,14 +60,42 @@ async function guardarRecibo() {
         return;
     }
     
-    // Helper para obtener valores de forma segura
+    // Helper para obtener valores
     const val = (id) => {
         const el = document.getElementById(id);
         return el ? (el.value || '') : '';
     };
     
-    // ✅ ENVIAR TODOS LOS CAMPOS (incluso vacíos como string vacío)
+    // Helper para campos requeridos (envía "N/A" si está vacío)
+    const req = (id) => {
+        const v = val(id).trim();
+        return v || 'N/A';
+    };
+    
+    // Helper para convertir a número decimal (0 si vacío)
+    const dec = (id) => {
+        const v = val(id).replace(/[^0-9.-]/g, '');
+        const n = parseFloat(v);
+        return isNaN(n) ? 0 : n;
+    };
+    
+    // Helper para convertir a número entero (null si vacío)
+    const intOrNull = (id) => {
+        const v = val(id);
+        if (!v) return null;
+        const n = parseInt(v, 10);
+        return isNaN(n) ? null : n;
+    };
+    
+    // Helper para convertir fecha a ISO o null
+    const fechaOrNull = (id) => {
+        const v = val(id);
+        return v || null;
+    };
+    
+    // ✅ DATOS CON TIPOS CORRECTOS
     const data = {
+        // Strings normales
         nombre: nombre,
         estadoCivil: val('ddlEstado'),
         oficio: val('txtOficio'),
@@ -81,12 +109,53 @@ async function guardarRecibo() {
         email1: val('txtEmail1'),
         email2: val('txtEmail2'),
         montoLetras: val('txtMonto'),
-        montoUSD: val('txtMontoUSD'),
         numeroCasa: val('txtNumeroCasa'),
         lote: val('txtlote'),
         tipoCasa: val('ddltipocasa'),
         bancoCliente: val('txtBancoCliente'),
-        cuentaCliente: val('txtCuentaCliente')
+        cuentaCliente: val('txtCuentaCliente'),
+        
+        // ⚠️ CAMPOS REQUERIDOS (enviar "N/A" si están vacíos)
+        precioLetras: req('TextBox0'),
+        duenoCuenta: req('txtDueñoCuenta'),
+        cuentaExterior: req('txtCuentaExterior'),
+        nombreBanco: req('txtNombreBanco'),
+        aba: req('txtABA'),
+        swift: req('txtSWIFT'),
+        direccionBanco: req('txtDireccionBanco'),
+        
+        // Decimales (NO nullable en C#)
+        montoUsd: dec('txtMontoUSD'),
+        precioUsd: dec('TextBox0'),
+        
+        // Decimales nullable
+        montoReserva: val('txtmonto1') ? dec('txtmonto1') : null,
+        montoContrato: val('TextBox2') ? dec('TextBox2') : null,
+        montoCuota: val('TextBox3') ? dec('TextBox3') : null,
+        montoExtraordinario: val('TextBox4') ? dec('TextBox4') : null,
+        montoDescuento: val('txtreduceprecio') ? dec('txtreduceprecio') : null,
+        
+        // Enteros nullable
+        diaPagoCuota: intOrNull('txtnumcuota'),
+        diaFirma: intOrNull('ddldia'),
+        mesFirma: (() => {
+            const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                          'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            const mesTexto = val('ddlmes');
+            const idx = meses.indexOf(mesTexto);
+            return idx >= 0 ? idx + 1 : null;
+        })(),
+        anoFirma: intOrNull('ddlano'),
+        
+        // Fechas nullable
+        fechaReserva: fechaOrNull('fechaReserva'),
+        fechaContrato: fechaOrNull('fechaContrato'),
+        
+        // Booleano
+        aplicaDescuento: document.getElementById('chbxAplicar')?.checked || false,
+        
+        // Fecha de creación
+        fechaCreacion: new Date().toISOString()
     };
     
     console.log('📤 Datos a enviar:', data);
