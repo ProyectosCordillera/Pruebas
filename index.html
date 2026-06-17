@@ -454,18 +454,22 @@
 
     <!-- Scripts -->
     
-    <!-- Funciones del menú -->
-<script src="js/menu-functions.js"></script>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Funciones del formulario -->
-    <script src="js/form-functions.js"></script>
-    
-    <!-- Generador de PDF -->
-    <script src="js/pdf-generator.js"></script>
+<!-- Scripts -->
+
+<!-- 1. Bootstrap JS (PRIMERO - lo usan todos) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- 2. API (antes de menu-functions porque la usa) -->
 <script src="js/api-recibo.js"></script>
+
+<!-- 3. Funciones del formulario -->
+<script src="js/form-functions.js"></script>
+
+<!-- 4. Generador de PDF -->
+<script src="js/pdf-generator.js"></script>
+
+<!-- 5. Funciones del menú (AL FINAL - usa todo lo anterior) -->
+<script src="js/menu-functions.js"></script>
 
 </body>
 </html>
