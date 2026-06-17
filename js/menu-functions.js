@@ -311,7 +311,6 @@ function cargarDatosEnFormulario(r) {
     const setDate = (id, value) => {
         const el = document.getElementById(id);
         if (el && value) {
-            // Si es fecha ISO, convertir a formato input date
             if (value.includes('T')) {
                 el.value = value.split('T')[0];
             } else {
@@ -343,10 +342,26 @@ function cargarDatosEnFormulario(r) {
     setVal('txtMonto', r.montoLetras);
     setVal('txtMontoUSD', r.montoUsd || '0');
     
-    // Casa
-    setVal('txtNumeroCasa', r.numeroCasa);
+    // ✅ CASA: Sincronizar dropdown con el valor guardado
+    const numeroCasa = r.numeroCasa || '';
+    setVal('txtNumeroCasa', numeroCasa);
     setVal('txtlote', r.lote);
     setSelect('ddltipocasa', r.tipoCasa);
+    
+    // ✅ Sincronizar el dropdown de casa número
+    const ddlCasa = document.getElementById('ddlcasaNumero');
+    if (ddlCasa && numeroCasa) {
+        // Buscar la opción que coincida con el valor guardado
+        const opciones = Array.from(ddlCasa.options);
+        const opcionEncontrada = opciones.find(opt => opt.value === numeroCasa || opt.text === numeroCasa);
+        
+        if (opcionEncontrada) {
+            ddlCasa.value = opcionEncontrada.value;
+            console.log('✅ Dropdown de casa sincronizado:', numeroCasa);
+        } else {
+            console.warn('️ No se encontró la opción para casa:', numeroCasa);
+        }
+    }
     
     // Precio
     setVal('TextBox0', r.precioLetras);
