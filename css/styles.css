@@ -460,3 +460,77 @@ body {
     font-weight: bold;
     margin-left: 3px;
 }
+
+/* ==================== ELIMINAR RECUADROS ==================== */
+
+/* Para TODOS los inputs, selects y textareas */
+input,
+select,
+textarea {
+    border: none !important;
+    border-bottom: 1px solid #000 !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    padding: 2px 4px !important;
+}
+
+/* Específico para inputs de tipo date (tienen ícono de calendario) */
+input[type="date"] {
+    border: none !important;
+    border-bottom: 1px solid #000 !important;
+    background-color: transparent !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+
+/* Ocultar el ícono de calendario en Chrome/Safari */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+/* Específico para selects (tienen flecha) */
+select {
+    border: none !important;
+    border-bottom: 1px solid #000 !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    cursor: pointer;
+}
+
+/* ==================== PARA IMPRESIÓN ==================== */
+@media print {
+    input,
+    select,
+    textarea {
+        border: none !important;
+        border-bottom: 1px solid #000 !important;
+        background-color: transparent !important;
+        background: transparent !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        box-shadow: none !important;
+    }
+    
+    /* Ocultar ícono de calendario al imprimir */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        display: none !important;
+    }
+    
+    /* Forzar que no haya fondos en nada */
+    * {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+}
