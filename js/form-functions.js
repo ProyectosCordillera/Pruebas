@@ -1,221 +1,200 @@
 // ============================================
-// FUNCIONES DE INICIALIZACIÓN Y FORMULARIO
+// VARIABLES GLOBALES
 // ============================================
+let recibosCache = [];
+let idAEliminar = null;
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Inicializar dropdown de casas
-    initCasaDropdown();
+// ============================================
+// GUARDAR RECIBO
+// ============================================
+async function guardarRecibo() {
+    const nombre = document.getElementById('txtNombre').value.trim();
+    const cedula = document.getElementById('txtCedula').value.trim();
     
-    // Establecer fechas por defecto
-    setDefaultDates();
+    if (!nombre || !cedula) {
+        alert('⚠️ Complete al menos el nombre y la cédula antes de guardar');
+        return;
+    }
     
-    // Configurar checkbox de descuento
-    setupDiscountCheckbox();
+    // Recolectar datos del formulario
+    const data = {
+        nombre: nombre,
+        estadoCivil: document.getElementById('ddlEstado').value,
+        oficio: document.getElementById('txtOficio').value,
+        direccion1: document.getElementById('txtDireccion').value,
+        direccion2: document.getElementById('txtDireccion2').value,
+        nacionalidad: document.getElementById('txtNacionalidad2').value,
+        tipoIdentificacion: document.getElementById('ddlTipoId').value,
+        numeroIdentificacion: cedula,
+        celular: document.getElementById('txtCelular').value,
+        telefono2: document.getElementById('txtTelefono2').value,
+        email1: document.getElementById('txtEmail1').value,
+        email2: document.getElementById('txtEmail2').value,
+        montoLetras: document.getElementById('txtMonto').value,
+        montoUSD: document.getElementById('txtMontoUSD').value,
+        numeroCasa: document.getElementById('txtNumeroCasa').value,
+        lote: document.getElementById('txtlote').value,
+        tipoCasa: document.getElementById('ddltipocasa').value
+    };
     
-    // Configurar evento de cambio de casa
-    setupCasaChangeHandler();
-    
-    // Replicar valor del dropdown de casa al campo de texto
-    setupDropdownReplication('ddlcasaNumero', 'txtNumeroCasa');
-});
-
-// Función para inicializar el dropdown de casas
-function initCasaDropdown() {
-    const ddl = document.getElementById("ddlcasaNumero");
-    if (!ddl) return;
-    
-    for (let i = 1; i <= 65; i++) {
-        const num = i.toString().padStart(2, '0');
-        ddl.innerHTML += `<option value="FF-${num}">FF-${num}</option>`;
+    try {
+        const resultado = await ReciboAPI.guardar(data);
+        alert('✅ Recibo guardado correctamente');
+        console.log('Recibo guardado:', resultado);
+    } catch (err) {
+        alert('❌ Error al guardar: ' + err.message);
     }
 }
 
-// Función para configurar la replicación de dropdown a textbox
-function setupDropdownReplication(dropdownId, textboxId) {
-    var select = document.getElementById(dropdownId);
-    var input = document.getElementById(textboxId);
+// ============================================
+// NUEVO RECIBO (limpiar y enfocar)
+// ============================================
+function nuevoRecibo() {
+    if (confirm('¿Desea crear un nuevo recibo? Se perderán los datos actuales.')) {
+        resetForm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+// ============================================
+// ABRIR CONSULTA
+// ============================================
+async function abrirConsulta() {
+    const modal = new bootstrap.Modal(document.getElementById('modalConsulta'));
+    modal.show();
     
-    if (select && input) {
-        select.addEventListener('change', function() {
-            input.value = select.options[select.selectedIndex].text;
-        });
+    // Cargar recibos
+    document.getElementById('tablaRecibos').innerHTML = `
+        <tr><td colspan="6" class="text-center text-muted">
+            <i class="bi bi-hourglass-split"></i> Cargando...
+        </td></tr>`;
+    
+    try {
+        recibosCache = await ReciboAPI.listar();
+        renderizarRecibos(recibosCache);
+    } catch (err) {
+        document.getElementById('tablaRecibos').innerHTML = `
+            <tr><td colspan="6" class="text-center text-danger">
+                ❌ Error al cargar: ${err.message}
+            </td></tr>`;
+    }
+}
+
+// ============================================
+// RENDERIZAR TABLA DE RECIBOS
+// ============================================
+function renderizarRecibos(lista) {
+    const tbody = document.getElementById('tablaRecibos');
+    document.getElementById('totalRecibos').textContent = `${lista.length} recibo(s)`;
+    
+    if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">
+            No hay recibos para mostrar
+        </td></tr>`;
+        return;
+    }
+    
+    tbody.innerHTML = lista.map(r => `
+        <tr>
+            <td><strong>${r.id}</strong></td>
+            <td>${r.nombre || '-'}</td>
+            <td>${r.numeroIdentificacion || '-'}</td>
+            <td><span class="badge bg-secondary">${r.numeroCasa || '-'}</span></td>
+            <td>$${r.montoUSD || '0'}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary me-1" 
+                        onclick="editarRecibo(${r.id})" title="Editar">
+                    <i class="bi bi-pencil-fill"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" 
+                        onclick="confirmarEliminar(${r.id}, '${(r.nombre || '').replace(/'/g, "\\'")}')" 
+                        title="Eliminar">
+                    <i class="bi bi-trash-fill"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ============================================
+// BUSCAR / FILTRAR
+// ============================================
+function filtrarRecibos() {
+    const texto = document.getElementById('buscarRecibo').value.toLowerCase();
+    const filtrados = recibosCache.filter(r => 
+        (r.nombre || '').toLowerCase().includes(texto) ||
+        (r.numeroIdentificacion || '').toLowerCase().includes(texto) ||
+        (r.numeroCasa || '').toLowerCase().includes(texto)
+    );
+    renderizarRecibos(filtrados);
+}
+
+// ============================================
+// EDITAR RECIBO
+// ============================================
+async function editarRecibo(id) {
+    try {
+        const r = await ReciboAPI.obtener(id);
         
-        // Inicializar con el valor por defecto si existe
-        if (select.selectedIndex >= 0) {
-            input.value = select.options[select.selectedIndex].text;
-        }
-    } else {
-        console.error('No se encontraron los controles: ' + dropdownId + ' o ' + textboxId);
+        // Llenar el formulario con los datos
+        document.getElementById('txtNombre').value = r.nombre || '';
+        document.getElementById('ddlEstado').value = r.estadoCivil || '';
+        document.getElementById('txtOficio').value = r.oficio || '';
+        document.getElementById('txtDireccion').value = r.direccion1 || '';
+        document.getElementById('txtDireccion2').value = r.direccion2 || '';
+        document.getElementById('txtNacionalidad2').value = r.nacionalidad || '';
+        document.getElementById('ddlTipoId').value = r.tipoIdentificacion || '';
+        document.getElementById('txtCedula').value = r.numeroIdentificacion || '';
+        document.getElementById('txtCelular').value = r.celular || '';
+        document.getElementById('txtTelefono2').value = r.telefono2 || '';
+        document.getElementById('txtEmail1').value = r.email1 || '';
+        document.getElementById('txtEmail2').value = r.email2 || '';
+        document.getElementById('txtMonto').value = r.montoLetras || '';
+        document.getElementById('txtMontoUSD').value = r.montoUSD || '';
+        document.getElementById('txtNumeroCasa').value = r.numeroCasa || '';
+        document.getElementById('txtlote').value = r.lote || '';
+        document.getElementById('ddltipocasa').value = r.tipoCasa || '';
+        
+        // Guardar ID para actualizar (opcional, si tu API soporta PUT)
+        document.getElementById('Hoja1').dataset.editandoId = id;
+        
+        // Cerrar modal y scroll arriba
+        bootstrap.Modal.getInstance(document.getElementById('modalConsulta')).hide();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        alert('✅ Recibo cargado. Modifique los datos y presione Guardar.');
+    } catch (err) {
+        alert('❌ Error al cargar: ' + err.message);
     }
 }
 
-// Establecer fechas por defecto
-function setDefaultDates() {
-    const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0];
-    document.getElementById('fechaReserva').value = formattedDate;
+// ============================================
+// CONFIRMAR Y ELIMINAR
+// ============================================
+function confirmarEliminar(id, nombre) {
+    idAEliminar = id;
+    document.getElementById('reciboEliminarInfo').textContent = `#${id} - ${nombre}`;
     
-    // Establecer fecha de contrato para 7 días después
-    const contractDate = new Date();
-    contractDate.setDate(today.getDate() + 7);
-    document.getElementById('fechaContrato').value = contractDate.toISOString().split('T')[0];
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'));
+    modal.show();
 }
 
-// Configurar checkbox de descuento
-function setupDiscountCheckbox() {
-    const checkbox = document.getElementById('chbxAplicar');
-    const panel = document.getElementById('pnlMensajeDescuento');
-    
-    if (!checkbox || !panel) return;
-    
-    checkbox.addEventListener('change', function() {
-        panel.style.display = this.checked ? 'block' : 'none';
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnConfirmarEliminar').addEventListener('click', async () => {
+        if (!idAEliminar) return;
+        
+        try {
+            await ReciboAPI.eliminar(idAEliminar);
+            alert('✅ Recibo eliminado');
+            
+            // Recargar lista
+            recibosCache = recibosCache.filter(r => r.id !== idAEliminar);
+            renderizarRecibos(recibosCache);
+            
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmar')).hide();
+            idAEliminar = null;
+        } catch (err) {
+            alert('❌ Error al eliminar: ' + err.message);
+        }
     });
-    
-    // Inicializar estado del panel
-    panel.style.display = checkbox.checked ? 'block' : 'none';
-}
-
-// Configurar evento para actualizar campos según la casa seleccionada
-function setupCasaChangeHandler() {
-    const ddlcasaNumero = document.getElementById('ddlcasaNumero');
-    const txtlote = document.getElementById('txtlote');
-    
-    if (!ddlcasaNumero || !txtlote) return;
-    
-    ddlcasaNumero.addEventListener('change', function() {
-        var fincaValue = this.value;
-        
-        // Extraer el número del formato "FF-XX"
-        var numeroFinca = parseInt(fincaValue.replace('FF-', ''), 10);
-        
-        // Validar que sea un número válido
-        if (isNaN(numeroFinca)) {
-            txtlote.value = "";
-            return;
-        }
-        
-        // Lógica condicional usando comparaciones numéricas
-        if (numeroFinca === 1) {
-            txtlote.value = "110 m²";
-        } else if (numeroFinca >= 2 && numeroFinca <= 7) {
-            txtlote.value = "119 m²";
-        } else if (numeroFinca >= 8 && numeroFinca <= 10) {
-            txtlote.value = "110 m²";
-        } else if (numeroFinca >= 11 && numeroFinca <= 15) {
-            txtlote.value = "119 m²";
-        } else if (numeroFinca >= 16 && numeroFinca <= 16) {
-            txtlote.value = "110 m²";
-        } else if (numeroFinca >= 17 && numeroFinca <= 32) {
-            txtlote.value = "112 m²";
-        } else if (numeroFinca >= 33 && numeroFinca <= 47) {
-            txtlote.value = "110 m²";
-        } else if (numeroFinca >= 48 && numeroFinca <= 64) {
-            txtlote.value = "110 m²";
-        } else if (numeroFinca === 65) {
-            txtlote.value = "150 m²";
-        } else {
-            txtlote.value = "";
-        }
-    });
-    
-    // Si hay un valor preseleccionado, actualizar el lote
-    if (ddlcasaNumero.value) {
-        ddlcasaNumero.dispatchEvent(new Event('change'));
-    }
-}
-
-// Funciones para navegación entre campos de dirección
-function moveToNext(currentInput, event) {
-    const nextInput = document.getElementById('txtDireccion2');
-    
-    // Solo saltar al siguiente campo cuando se alcanza el máximo de caracteres
-    if (currentInput.value.length >= currentInput.maxLength) {
-        nextInput.focus();
-    }
-}
-
-function moveToPrevious(currentInput, event) {
-    const prevInput = document.getElementById('txtDireccion');
-    
-    // Si se presiona Backspace al inicio del segundo input
-    if (event.key === 'Backspace' && currentInput.selectionStart === 0 && currentInput.value === '') {
-        event.preventDefault();
-        prevInput.focus();
-        prevInput.selectionStart = prevInput.value.length;
-        prevInput.selectionEnd = prevInput.value.length;
-    }
-}
-
-// Función para limpiar el formulario
-function resetForm() {
-    if (confirm('¿Está seguro que desea limpiar todo el formulario? Se perderán todos los datos ingresados.')) {
-        document.querySelectorAll('input, select, textarea').forEach(element => {
-            if (element.type !== 'checkbox' && element.type !== 'radio') {
-                element.value = '';
-            } else {
-                element.checked = false;
-            }
-        });
-        
-        // Restablecer fechas
-        setDefaultDates();
-        
-        // Restablecer panel de descuento
-        document.getElementById('pnlMensajeDescuento').style.display = 'none';
-        
-        // Restablecer campo de lote
-        document.getElementById('txtlote').value = '';
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    
-    // 🔹 Listas con los datos
-    const dias = Array.from({length: 31}, (_, i) => (i + 1).toString());
-    
-    const meses = [
-        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    
-    const añoActual = new Date().getFullYear();
-    const anios = Array.from({length: 10}, (_, i) => (añoActual - 2 + i).toString()); 
-    // Genera desde (añoActual-2) hasta (añoActual+7), ajusta según necesites
-
-    // 🔹 Función para llenar un select desde un array
-    function llenarSelect(idSelect, opciones, valorPorDefecto = null) {
-        const select = document.getElementById(idSelect);
-        if (!select) return;
-        
-        // Conservar la primera opción (placeholder)
-        const placeholder = select.firstElementChild;
-        select.innerHTML = '';
-        if (placeholder) select.appendChild(placeholder);
-        
-        // Agregar opciones
-        opciones.forEach(opcion => {
-            const option = document.createElement('option');
-            option.value = opcion;
-            option.textContent = opcion;
-            select.appendChild(option);
-        });
-        
-        // Seleccionar valor por defecto si existe
-        if (valorPorDefecto !== null && select.querySelector(`option[value="${valorPorDefecto}"]`)) {
-            select.value = valorPorDefecto;
-        }
-    }
-
-    // 🔹 Obtener fecha actual
-    const hoy = new Date();
-    const diaHoy = hoy.getDate().toString();
-    const mesHoy = meses[hoy.getMonth()]; // 0 = Enero
-    const anoHoy = hoy.getFullYear().toString();
-
-    // 🔹 Llenar dropdowns y seleccionar fecha actual
-    llenarSelect('ddldia', dias, diaHoy);
-    llenarSelect('ddlmes', meses, mesHoy);
-    llenarSelect('ddlano', anios, anoHoy);
-
 });
