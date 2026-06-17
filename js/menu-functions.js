@@ -3,16 +3,61 @@
 // ============================================
 let recibosCache = [];
 let idAEliminar = null;
+let idEditando = null;
 
 // ============================================
-// GUARDAR RECIBO
+// 🔔 NOTIFICACIONES AMIGABLES (TOASTS)
+// ============================================
+function mostrarToast(mensaje, tipo = 'success') {
+    // Crear el contenedor si no existe
+    let contenedor = document.getElementById('toastContainer');
+    if (!contenedor) {
+        contenedor = document.createElement('div');
+        contenedor.id = 'toastContainer';
+        contenedor.className = 'toast-container position-fixed top-0 end-0 p-3';
+        contenedor.style.zIndex = '9999';
+        document.body.appendChild(contenedor);
+    }
+    
+    const iconos = {
+        success: 'bi-check-circle-fill',
+        danger: 'bi-x-circle-fill',
+        warning: 'bi-exclamation-triangle-fill',
+        info: 'bi-info-circle-fill'
+    };
+    
+    const toastId = 'toast-' + Date.now();
+    const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${tipo} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi ${iconos[tipo]} me-2"></i>
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    contenedor.insertAdjacentHTML('beforeend', toastHTML);
+    const toastEl = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+    
+    // Eliminar del DOM después de ocultarse
+    toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+// ============================================
+// 💾 GUARDAR RECIBO (crear o actualizar)
 // ============================================
 async function guardarRecibo() {
     const nombre = document.getElementById('txtNombre').value.trim();
     const cedula = document.getElementById('txtCedula').value.trim();
     
     if (!nombre || !cedula) {
-        alert('⚠️ Complete al menos el nombre y la cédula antes de guardar');
+        mostrarToast('Complete al menos nombre y cédula', 'warning');
+        document.getElementById('txtNombre').focus();
         return;
     }
     
@@ -34,39 +79,57 @@ async function guardarRecibo() {
         montoUSD: document.getElementById('txtMontoUSD').value,
         numeroCasa: document.getElementById('txtNumeroCasa').value,
         lote: document.getElementById('txtlote').value,
-        tipoCasa: document.getElementById('ddltipocasa').value
+        tipoCasa: document.getElementById('ddltipocasa').value,
+        bancoCliente: document.getElementById('txtBancoCliente').value,
+        cuentaCliente: document.getElementById('txtCuentaCliente').value
     };
     
     try {
-        const resultado = await ReciboAPI.guardar(data);
-        alert('✅ Recibo guardado correctamente');
-        console.log('Recibo guardado:', resultado);
+        // Verificar si estamos editando o creando
+        if (idEditando) {
+            // TODO: Si tu API soporta PUT, usa esto:
+            // await ReciboAPI.actualizar(idEditando, data);
+            // Por ahora, eliminamos y creamos uno nuevo
+            await ReciboAPI.eliminar(idEditando);
+            await ReciboAPI.guardar(data);
+            mostrarToast('✅ Recibo actualizado correctamente', 'success');
+            idEditando = null;
+        } else {
+            await ReciboAPI.guardar(data);
+            mostrarToast('✅ Recibo guardado correctamente', 'success');
+        }
     } catch (err) {
-        alert('❌ Error al guardar: ' + err.message);
+        mostrarToast('❌ Error: ' + err.message, 'danger');
     }
 }
 
 // ============================================
-// NUEVO RECIBO (limpiar y enfocar)
+// 🆕 NUEVO RECIBO
 // ============================================
 function nuevoRecibo() {
-    if (confirm('¿Desea crear un nuevo recibo? Se perderán los datos actuales.')) {
-        resetForm();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Verificar si hay datos sin guardar
+    const nombre = document.getElementById('txtNombre').value.trim();
+    if (nombre && !confirm('¿Desea crear un nuevo recibo? Se perderán los datos actuales.')) {
+        return;
     }
+    
+    resetForm();
+    idEditando = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mostrarToast('📝 Formulario listo para nuevo recibo', 'info');
 }
 
 // ============================================
-// ABRIR CONSULTA
+// 🔍 ABRIR CONSULTA
 // ============================================
 async function abrirConsulta() {
     const modal = new bootstrap.Modal(document.getElementById('modalConsulta'));
     modal.show();
     
-    // Cargar recibos
     document.getElementById('tablaRecibos').innerHTML = `
-        <tr><td colspan="6" class="text-center text-muted">
-            <i class="bi bi-hourglass-split"></i> Cargando...
+        <tr><td colspan="6" class="text-center text-muted py-4">
+            <div class="spinner-border spinner-border-sm me-2"></div>
+            Cargando recibos...
         </td></tr>`;
     
     try {
@@ -74,21 +137,23 @@ async function abrirConsulta() {
         renderizarRecibos(recibosCache);
     } catch (err) {
         document.getElementById('tablaRecibos').innerHTML = `
-            <tr><td colspan="6" class="text-center text-danger">
-                ❌ Error al cargar: ${err.message}
+            <tr><td colspan="6" class="text-center text-danger py-4">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Error al cargar: ${err.message}
             </td></tr>`;
     }
 }
 
 // ============================================
-// RENDERIZAR TABLA DE RECIBOS
+// 📋 RENDERIZAR TABLA DE RECIBOS
 // ============================================
 function renderizarRecibos(lista) {
     const tbody = document.getElementById('tablaRecibos');
     document.getElementById('totalRecibos').textContent = `${lista.length} recibo(s)`;
     
     if (lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
             No hay recibos para mostrar
         </td></tr>`;
         return;
@@ -96,11 +161,11 @@ function renderizarRecibos(lista) {
     
     tbody.innerHTML = lista.map(r => `
         <tr>
-            <td><strong>${r.id}</strong></td>
-            <td>${r.nombre || '-'}</td>
+            <td><span class="badge bg-primary">#${r.id}</span></td>
+            <td><strong>${r.nombre || '-'}</strong></td>
             <td>${r.numeroIdentificacion || '-'}</td>
-            <td><span class="badge bg-secondary">${r.numeroCasa || '-'}</span></td>
-            <td>$${r.montoUSD || '0'}</td>
+            <td><span class="badge bg-secondary">Casa ${r.numeroCasa || '-'}</span></td>
+            <td class="text-success fw-bold">$${r.montoUSD || '0'}</td>
             <td class="text-center">
                 <button class="btn btn-sm btn-outline-primary me-1" 
                         onclick="editarRecibo(${r.id})" title="Editar">
@@ -117,26 +182,26 @@ function renderizarRecibos(lista) {
 }
 
 // ============================================
-// BUSCAR / FILTRAR
+// 🔎 BUSCAR / FILTRAR
 // ============================================
 function filtrarRecibos() {
     const texto = document.getElementById('buscarRecibo').value.toLowerCase();
     const filtrados = recibosCache.filter(r => 
         (r.nombre || '').toLowerCase().includes(texto) ||
         (r.numeroIdentificacion || '').toLowerCase().includes(texto) ||
-        (r.numeroCasa || '').toLowerCase().includes(texto)
+        (r.numeroCasa || '').toString().includes(texto)
     );
     renderizarRecibos(filtrados);
 }
 
 // ============================================
-// EDITAR RECIBO
+// ✏️ EDITAR RECIBO
 // ============================================
 async function editarRecibo(id) {
     try {
         const r = await ReciboAPI.obtener(id);
         
-        // Llenar el formulario con los datos
+        // Llenar el formulario
         document.getElementById('txtNombre').value = r.nombre || '';
         document.getElementById('ddlEstado').value = r.estadoCivil || '';
         document.getElementById('txtOficio').value = r.oficio || '';
@@ -154,47 +219,93 @@ async function editarRecibo(id) {
         document.getElementById('txtNumeroCasa').value = r.numeroCasa || '';
         document.getElementById('txtlote').value = r.lote || '';
         document.getElementById('ddltipocasa').value = r.tipoCasa || '';
+        document.getElementById('txtBancoCliente').value = r.bancoCliente || '';
+        document.getElementById('txtCuentaCliente').value = r.cuentaCliente || '';
         
-        // Guardar ID para actualizar (opcional, si tu API soporta PUT)
-        document.getElementById('Hoja1').dataset.editandoId = id;
+        // Guardar ID para actualizar al guardar
+        idEditando = id;
         
         // Cerrar modal y scroll arriba
         bootstrap.Modal.getInstance(document.getElementById('modalConsulta')).hide();
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
-        alert('✅ Recibo cargado. Modifique los datos y presione Guardar.');
+        mostrarToast(`📝 Editando recibo #${id} - ${r.nombre}`, 'info');
     } catch (err) {
-        alert('❌ Error al cargar: ' + err.message);
+        mostrarToast('❌ Error al cargar: ' + err.message, 'danger');
     }
 }
 
 // ============================================
-// CONFIRMAR Y ELIMINAR
+// 🗑️ CONFIRMAR Y ELIMINAR
 // ============================================
 function confirmarEliminar(id, nombre) {
     idAEliminar = id;
     document.getElementById('reciboEliminarInfo').textContent = `#${id} - ${nombre}`;
     
-    const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'));
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'), {
+        backdrop: 'static',  // No se cierra al hacer clic fuera
+        keyboard: false      // No se cierra con ESC
+    });
     modal.show();
 }
 
+// ============================================
+// 🎯 INICIALIZACIÓN
+// ============================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Botón confirmar eliminación
     document.getElementById('btnConfirmarEliminar').addEventListener('click', async () => {
         if (!idAEliminar) return;
         
+        const btn = document.getElementById('btnConfirmarEliminar');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Eliminando...';
+        
         try {
             await ReciboAPI.eliminar(idAEliminar);
-            alert('✅ Recibo eliminado');
+            mostrarToast('✅ Recibo eliminado', 'success');
             
-            // Recargar lista
+            // Actualizar lista
             recibosCache = recibosCache.filter(r => r.id !== idAEliminar);
             renderizarRecibos(recibosCache);
             
             bootstrap.Modal.getInstance(document.getElementById('modalConfirmar')).hide();
+            
+            // Si estábamos editando este recibo, limpiar
+            if (idEditando === idAEliminar) {
+                idEditando = null;
+            }
+            
             idAEliminar = null;
         } catch (err) {
-            alert('❌ Error al eliminar: ' + err.message);
+            mostrarToast('❌ Error al eliminar: ' + err.message, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-trash-fill"></i> Sí, eliminar';
+        }
+    });
+    
+    // Atajos de teclado
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+S = Guardar
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            guardarRecibo();
+        }
+        // Ctrl+P = Imprimir
+        if (e.ctrlKey && e.key === 'p') {
+            e.preventDefault();
+            window.print();
+        }
+        // Ctrl+N = Nuevo
+        if (e.ctrlKey && e.key === 'n') {
+            e.preventDefault();
+            nuevoRecibo();
+        }
+        // Ctrl+B = Buscar (consultar)
+        if (e.ctrlKey && e.key === 'b') {
+            e.preventDefault();
+            abrirConsulta();
         }
     });
 });
