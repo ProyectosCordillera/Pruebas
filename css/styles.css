@@ -29,9 +29,6 @@ body {
 .monto-negativo { color: #dc3545; font-weight: bold; }
 .monto-cero { color: #6c757d; }
 
-.badge-cuadrada { background-color: #198754; }
-.badge-diferencia { background-color: #dc3545; }
-
 .animacion-carga {
     animation: fadeIn 0.5s ease-in;
 }
