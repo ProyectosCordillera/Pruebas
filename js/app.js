@@ -9,7 +9,7 @@ let resultadoAnalisis = null;
 // UTILIDADES
 // ============================================
 const formatearMonto = (n) => {
-    if (n === null || n === undefined || isNaN(n)) return '-';
+    if (n === null || n === undefined || isNaN(n)) return '0.00';
     return new Intl.NumberFormat('es-CR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
@@ -18,114 +18,156 @@ const formatearMonto = (n) => {
 
 const parsearMonto = (str) => {
     if (!str) return 0;
-    const limpio = String(str).replace(/[^\d.-]/g, '');
+    // Limpiar: quitar comas, espacios, símbolos de moneda
+    const limpio = String(str).replace(/[₡,\s]/g, '').trim();
     const num = parseFloat(limpio);
     return isNaN(num) ? 0 : num;
 };
 
+const log = (msg, data) => {
+    console.log(`[Analizador] ${msg}`, data !== undefined ? data : '');
+};
+
 // ============================================
-// PARSER: OBRA.TXT (CORREGIDO)
+// PARSER: OBRA.TXT (CORREGIDO PARA FORMATO REAL)
 // ============================================
 function parsearObra(texto) {
+    log('Iniciando parseo de obra.txt');
     const lineas = texto.split('\n').filter(l => l.trim());
+    log(`Total líneas en obra: ${lineas.length}`);
+    
     const categorias = [];
     let categoriaActual = null;
 
-    for (const linea of lineas) {
-        const campos = linea.split('\t').map(c => c.trim());
+    for (let i = 0; i < lineas.length; i++) {
+        const linea = lineas[i];
+        const campos = linea.split('\t');
         
-        // Buscar el tipo de registro (SALIDA, SALIDA M.O., DEVOLUCIÓN, o categoría)
-        const idxTipo = campos.findIndex(c => 
-            c === 'SALIDA' || c === 'SALIDA M.O.' || c === 'DEVOLUCIÓN' || c === 'DEVOLUCIÃ"ÓN'
-        );
-
-        if (idxTipo > 0) {
-            // Es una línea de movimiento
-            const tipo = campos[idxTipo];
-            const codigo = campos[idxTipo + 1];
-            const fecha = campos[idxTipo + 2];
-            const cantidad = parsearMonto(campos[idxTipo + 3]);
-            const unidad = campos[idxTipo + 4];
-            const montoTotal = parsearMonto(campos[idxTipo + 5]);
-
+        // Buscar el índice donde está "Monto Total" (el header se repite en cada línea)
+        const idxMontoTotal = campos.findIndex(c => c && c.trim() === 'Monto Total');
+        
+        if (idxMontoTotal < 0) {
+            log(`Línea ${i} sin "Monto Total": ${linea.substring(0, 50)}`);
+            continue;
+        }
+        
+        // Después de "Monto Total" viene el contenido variable
+        const resto = campos.slice(idxMontoTotal + 1).map(c => c && c.trim());
+        
+        // Detectar si es línea de categoría o de movimiento
+        // Categoría: empieza con código numérico seguido de nombre en texto
+        // Movimiento: empieza con SALIDA, SALIDA M.O., o DEVOLUCIÓN
+        
+        const primerCampo = resto[0];
+        
+        if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ“N'].includes(primerCampo)) {
+            // Es un MOVIMIENTO
+            // Formato: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNITARIO
+            const tipo = primerCampo;
+            const codigo = resto[1];
+            const fecha = resto[2];
+            const cantidad = parsearMonto(resto[3]);
+            const unidad = resto[4];
+            const montoTotal = parsearMonto(resto[5]);
+            
+            log(`  Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
+            
             if (categoriaActual) {
                 categoriaActual.movimientos.push({
                     tipo, codigo, fecha, cantidad, unidad, montoTotal
                 });
+            } else {
+                log(`  ⚠️ Movimiento sin categoría previa: #${codigo}`);
             }
-        } else {
-            // Es una línea de categoría - buscar el código numérico después de "Monto Total"
-            const idxMontoTotal = campos.findIndex(c => c === 'Monto Total');
-            if (idxMontoTotal > 0) {
-                const codigo = campos[idxMontoTotal + 1];
-                const nombre = campos[idxMontoTotal + 2];
-                const cantidad = parsearMonto(campos[idxMontoTotal + 3]);
-                const unidad = campos[idxMontoTotal + 4];
-                const montoUnitario = parsearMonto(campos[idxMontoTotal + 5]);
-                const montoTotal = parsearMonto(campos[idxMontoTotal + 6]);
-
-                // Solo crear categoría si el código es numérico y no es un header
-                if (/^\d+$/.test(codigo) && !['Movimiento', 'Código', 'Fecha'].includes(codigo)) {
-                    categoriaActual = {
-                        codigo,
-                        nombre,
-                        cantidad,
-                        unidad,
-                        montoUnitario,
-                        montoTotal,
-                        movimientos: []
-                    };
-                    categorias.push(categoriaActual);
-                }
-            }
+        } else if (/^\d+$/.test(primerCampo)) {
+            // Es una CATEGORÍA
+            // Formato: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
+            const codigo = primerCampo;
+            const nombre = resto[1];
+            const cantidad = parsearMonto(resto[2]);
+            const unidad = resto[3];
+            const montoUnitario = parsearMonto(resto[4]);
+            const montoTotal = parsearMonto(resto[5]);
+            
+            log(`  Categoría: ${codigo} - ${nombre} (total: ${montoTotal})`);
+            
+            categoriaActual = {
+                codigo,
+                nombre,
+                cantidad,
+                unidad,
+                montoUnitario,
+                montoTotal,
+                movimientos: []
+            };
+            categorias.push(categoriaActual);
         }
     }
 
     const totalGeneral = categorias.reduce((s, c) => s + c.montoTotal, 0);
+    log(`Parseo obra completado: ${categorias.length} categorías, total: ${totalGeneral}`);
+    
     return { categorias, totalGeneral };
 }
 
 // ============================================
-// PARSER: PROCESO.TXT (CORREGIDO)
+// PARSER: PROCESO.TXT (CORREGIDO PARA FORMATO REAL)
 // ============================================
 function parsearProceso(texto) {
+    log('Iniciando parseo de proceso.txt');
     const lineas = texto.split('\n').filter(l => l.trim());
+    log(`Total líneas en proceso: ${lineas.length}`);
+    
     const asientos = [];
     let totalDebitos = 0, totalCreditos = 0, saldoFinal = 0;
 
-    for (const linea of lineas) {
-        const campos = linea.split('\t').map(c => c.trim());
+    for (let i = 0; i < lineas.length; i++) {
+        const linea = lineas[i];
+        const campos = linea.split('\t');
         
-        // Buscar la fecha (formato DD-MM-YYYY)
-        const idxFecha = campos.findIndex(c => /^\d{2}-\d{2}-\d{4}$/.test(c));
+        // Buscar el índice donde está "Saldo" (el header se repite en cada línea)
+        const idxSaldo = campos.findIndex(c => c && c.trim() === 'Saldo');
         
-        if (idxFecha > 0) {
-            const fecha = campos[idxFecha];
-            const numero = campos[idxFecha + 1];
-            const descripcion = campos[idxFecha + 2];
+        if (idxSaldo < 0) {
+            log(`Línea ${i} sin "Saldo": ${linea.substring(0, 50)}`);
+            continue;
+        }
+        
+        // Después de "Saldo" viene el contenido variable
+        const resto = campos.slice(idxSaldo + 1).map(c => c && c.trim());
+        
+        // Detectar tipo de línea
+        const primerCampo = resto[0];
+        
+        // Línea de totales de la cuenta
+        if (primerCampo === '06-02-01-04-01') {
+            // Formato: CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
+            totalDebitos = parsearMonto(resto[2]);
+            totalCreditos = parsearMonto(resto[3]);
+            saldoFinal = parsearMonto(resto[4]);
+            log(`  Totales cuenta: deb=${totalDebitos} cred=${totalCreditos} saldo=${saldoFinal}`);
+            continue;
+        }
+        
+        // Línea de asiento: debe empezar con fecha DD-MM-YYYY
+        if (/^\d{2}-\d{2}-\d{4}$/.test(primerCampo)) {
+            const fecha = primerCampo;
+            const numero = resto[1];
+            const descripcion = resto[2];
+            const debitos = parsearMonto(resto[3]);
+            const creditos = parsearMonto(resto[4]);
+            const saldo = parsearMonto(resto[5]);
             
-            // Buscar Débitos, Créditos y Saldo después de la descripción
-            // La estructura es: ...descripcion [vacío] debitos creditos saldo...
-            const debitos = parsearMonto(campos[idxFecha + 4]);
-            const creditos = parsearMonto(campos[idxFecha + 5]);
-            const saldo = parsearMonto(campos[idxFecha + 6]);
-
+            log(`  Asiento: ${fecha} #${numero} - ${descripcion.substring(0, 40)}... deb=${debitos} cred=${creditos}`);
+            
             asientos.push({
-                fecha,
-                numero,
-                descripcion,
-                debitos,
-                creditos,
-                saldo
+                fecha, numero, descripcion, debitos, creditos, saldo
             });
-        } else if (campos[0] === '06-02-01-04-01') {
-            // Línea de totales de la cuenta
-            totalDebitos = parsearMonto(campos[2]);
-            totalCreditos = parsearMonto(campos[3]);
-            saldoFinal = parsearMonto(campos[4]);
         }
     }
 
+    log(`Parseo proceso completado: ${asientos.length} asientos, saldo final: ${saldoFinal}`);
+    
     return { asientos, totalDebitos, totalCreditos, saldoFinal };
 }
 
@@ -133,6 +175,7 @@ function parsearProceso(texto) {
 // MOTOR DE COMPARACIÓN
 // ============================================
 function compararArchivos(obra, proceso) {
+    log('Iniciando comparación...');
     const reqObra = new Map();
     
     // Extraer requisiciones de obra
@@ -153,16 +196,19 @@ function compararArchivos(obra, proceso) {
         }
     }
 
+    log(`Requisiciones en obra: ${reqObra.size}`);
+
     // Extraer requisiciones de proceso
     for (const asiento of proceso.asientos) {
-        const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/);
+        const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/i);
         if (match) {
             const codigo = match[1] || match[2];
-            const esDevolucion = asiento.descripcion.includes('DEVOLUCION');
-            const monto = esDevolucion ? -asiento.creditos : asiento.debitos;
+            const esDevolucion = /DEVOLUCION/i.test(asiento.descripcion);
+            const monto = esDevolucion ? asiento.creditos : asiento.debitos;
+            const montoConSigno = esDevolucion ? -monto : monto;
 
             if (reqObra.has(codigo)) {
-                reqObra.get(codigo).montoProceso += monto;
+                reqObra.get(codigo).montoProceso += montoConSigno;
             } else {
                 reqObra.set(codigo, {
                     codigo,
@@ -170,11 +216,13 @@ function compararArchivos(obra, proceso) {
                     fecha: asiento.fecha,
                     categoria: 'Sin categoría en obra',
                     montoObra: 0,
-                    montoProceso: monto
+                    montoProceso: montoConSigno
                 });
             }
         }
     }
+
+    log(`Total requisiciones únicas: ${reqObra.size}`);
 
     // Clasificar resultados
     const coincidencias = [];
@@ -191,11 +239,13 @@ function compararArchivos(obra, proceso) {
         }
     }
 
-    // Asientos especiales
+    log(`Coincidencias: ${coincidencias.length}, Diferencias: ${diferencias.length}`);
+
+    // Asientos especiales (sin requisición)
     const asientosEspeciales = proceso.asientos.filter(a => 
-        !a.descripcion.includes('REQUISICION') && 
-        !a.descripcion.includes('DEVOLUCION')
+        !/REQUISICION|DEVOLUCION/i.test(a.descripcion)
     );
+    log(`Asientos especiales: ${asientosEspeciales.length}`);
 
     return {
         requisiciones: Array.from(reqObra.values()),
@@ -212,12 +262,18 @@ function compararArchivos(obra, proceso) {
 // RENDERIZADO
 // ============================================
 function renderizarResultados(resultado) {
-    document.getElementById('resultados').style.display = 'block';
-    document.getElementById('resultados').classList.add('animacion-carga');
+    const divResultados = document.getElementById('resultados');
+    if (!divResultados) {
+        alert('Error: no se encontró el contenedor de resultados. Revisa el HTML.');
+        return;
+    }
+    
+    divResultados.style.display = 'block';
+    divResultados.classList.add('animacion-carga');
 
     document.getElementById('totalObra').textContent = '₡' + formatearMonto(resultado.totalObra);
     document.getElementById('totalProceso').textContent = '₡' + formatearMonto(resultado.totalProceso);
-    document.getElementById('totalDiferencia').textContent = '₡' + formatearMonto(resultado.totalDiferencia);
+    document.getElementById('totalDiferencia').textContent = '' + formatearMonto(resultado.totalDiferencia);
     document.getElementById('totalCuadradas').textContent = 
         `${resultado.coincidencias.length} / ${resultado.requisiciones.length}`;
 
@@ -231,7 +287,7 @@ function renderizarResultados(resultado) {
             <h6><i class="bi bi-info-circle"></i> Resumen del Análisis</h6>
             <p class="mb-1">• <strong>Total reportado en OBRA:</strong> ₡${formatearMonto(resultado.totalObra)}</p>
             <p class="mb-1">• <strong>Saldo final en PROCESO:</strong> ₡${formatearMonto(resultado.totalProceso)}</p>
-            <p class="mb-1">• <strong>Diferencia global:</strong> ${formatearMonto(resultado.totalDiferencia)}</p>
+            <p class="mb-1">• <strong>Diferencia global:</strong> ₡${formatearMonto(resultado.totalDiferencia)}</p>
             <p class="mb-0">• <strong>Asientos especiales (planillas, CCSS, intereses):</strong> 
                 ${resultado.asientosEspeciales.length}</p>
         </div>
@@ -246,7 +302,7 @@ function renderizarResultados(resultado) {
                             <td>${a.fecha}</td>
                             <td>${a.descripcion}</td>
                             <td class="monto-positivo">${a.debitos ? '₡'+formatearMonto(a.debitos) : '-'}</td>
-                            <td class="monto-negativo">${a.creditos ? '₡'+formatearMonto(a.creditos) : '-'}</td>
+                            <td class="monto-negativo">${a.creditos ? ''+formatearMonto(a.creditos) : '-'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -311,6 +367,8 @@ function renderizarResultados(resultado) {
                 </tbody>
             </table>
         </div>`;
+    
+    log('Resultados renderizados en el DOM');
 }
 
 // ============================================
@@ -344,10 +402,10 @@ function exportarJSON() {
 }
 
 // ============================================
-// INICIALIZACIÓN - EVENTOS
+// INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM cargado correctamente');
+    log('=== DOM Cargado ===');
     
     const fileObra = document.getElementById('fileObra');
     const fileProceso = document.getElementById('fileProceso');
@@ -355,77 +413,102 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnLimpiar = document.getElementById('btnLimpiar');
     const btnExportarCSV = document.getElementById('btnExportarCSV');
     const btnExportarJSON = document.getElementById('btnExportarJSON');
+    const divResultados = document.getElementById('resultados');
+
+    // Verificar que todos los elementos existan
+    const elementos = { fileObra, fileProceso, btnAnalizar, btnLimpiar, divResultados };
+    for (const [nombre, elem] of Object.entries(elementos)) {
+        if (!elem) {
+            console.error(`❌ Elemento "${nombre}" NO encontrado en el DOM`);
+        } else {
+            log(`✅ Elemento "${nombre}" encontrado`);
+        }
+    }
 
     if (!fileObra || !fileProceso || !btnAnalizar) {
-        console.error('No se encontraron los elementos del DOM');
+        alert('Error: No se encontraron los elementos necesarios en el HTML. Revisa los IDs.');
         return;
     }
 
-    // Validar archivos cargados
+    // Validar archivos
     function validarArchivos() {
         const archivosListos = fileObra.files.length > 0 && fileProceso.files.length > 0;
         btnAnalizar.disabled = !archivosListos;
-        console.log('Archivos listos:', archivosListos, '- Obra:', fileObra.files.length, '- Proceso:', fileProceso.files.length);
+        log(`Validación: Obra=${fileObra.files.length} archivos, Proceso=${fileProceso.files.length} archivos -> Botón ${archivosListos ? 'HABILITADO' : 'DESHABILITADO'}`);
     }
 
-    // Event listeners para carga de archivos
-    fileObra.addEventListener('change', validarArchivos);
-    fileProceso.addEventListener('change', validarArchivos);
+    fileObra.addEventListener('change', () => {
+        log(`Archivo obra seleccionado: ${fileObra.files[0]?.name} (${fileObra.files[0]?.size} bytes)`);
+        validarArchivos();
+    });
+    
+    fileProceso.addEventListener('change', () => {
+        log(`Archivo proceso seleccionado: ${fileProceso.files[0]?.name} (${fileProceso.files[0]?.size} bytes)`);
+        validarArchivos();
+    });
 
     // Botón Analizar
     btnAnalizar.addEventListener('click', async function() {
-        console.log('Iniciando análisis...');
+        log('🔵 Click en Analizar');
+        
         try {
+            if (!fileObra.files[0] || !fileProceso.files[0]) {
+                alert('Por favor selecciona ambos archivos primero.');
+                return;
+            }
+
+            btnAnalizar.disabled = true;
+            btnAnalizar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analizando...';
+
+            log('Leyendo archivos...');
             const textoObra = await fileObra.files[0].text();
             const textoProceso = await fileProceso.files[0].text();
 
-            console.log('Archivos leídos correctamente');
-            console.log('Texto obra length:', textoObra.length);
-            console.log('Texto proceso length:', textoProceso.length);
+            log(`Texto obra: ${textoObra.length} caracteres, ${textoObra.split('\n').length} líneas`);
+            log(`Texto proceso: ${textoProceso.length} caracteres, ${textoProceso.split('\n').length} líneas`);
 
+            log('Parseando obra...');
             datosObra = parsearObra(textoObra);
+            log(`Resultado obra: ${datosObra.categorias.length} categorías`);
+
+            log('Parseando proceso...');
             datosProceso = parsearProceso(textoProceso);
-            
-            console.log('Parseo completado');
-            console.log('Categorías obra:', datosObra.categorias.length);
-            console.log('Asientos proceso:', datosProceso.asientos.length);
+            log(`Resultado proceso: ${datosProceso.asientos.length} asientos`);
 
+            log('Comparando...');
             resultadoAnalisis = compararArchivos(datosObra, datosProceso);
-            
-            console.log('Comparación completada');
-            console.log('Requisiciones:', resultadoAnalisis.requisiciones.length);
-            console.log('Coincidencias:', resultadoAnalisis.coincidencias.length);
-            console.log('Diferencias:', resultadoAnalisis.diferencias.length);
 
+            log('Renderizando...');
             renderizarResultados(resultadoAnalisis);
-            console.log('Resultados renderizados');
+            
+            log('✅ Análisis completado exitosamente');
         } catch (error) {
-            console.error('Error al procesar:', error);
-            alert('Error al procesar los archivos: ' + error.message);
+            console.error('❌ Error:', error);
+            alert('Error al procesar: ' + error.message + '\n\nRevisa la consola (F12) para más detalles.');
+        } finally {
+            btnAnalizar.disabled = false;
+            btnAnalizar.innerHTML = '<i class="bi bi-gear"></i> Analizar Archivos';
         }
     });
 
     // Botón Limpiar
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', function() {
-            console.log('Limpiando...');
+            log('Limpiando todo...');
             fileObra.value = '';
             fileProceso.value = '';
-            document.getElementById('resultados').style.display = 'none';
+            if (divResultados) divResultados.style.display = 'none';
             btnAnalizar.disabled = true;
             datosObra = null;
             datosProceso = null;
             resultadoAnalisis = null;
+            log('✅ Limpieza completada');
         });
     }
 
-    // Botones de exportación
-    if (btnExportarCSV) {
-        btnExportarCSV.addEventListener('click', exportarCSV);
-    }
-    if (btnExportarJSON) {
-        btnExportarJSON.addEventListener('click', exportarJSON);
-    }
+    // Exportación
+    if (btnExportarCSV) btnExportarCSV.addEventListener('click', exportarCSV);
+    if (btnExportarJSON) btnExportarJSON.addEventListener('click', exportarJSON);
 
-    console.log('Event listeners configurados correctamente');
+    log('=== Inicialización completada ===');
 });
