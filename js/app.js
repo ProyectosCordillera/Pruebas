@@ -18,23 +18,18 @@ const formatearMonto = (n) => {
 
 const parsearMonto = (str) => {
     if (!str) return 0;
-    // Limpiar: quitar comas, espacios, símbolos de moneda
     const limpio = String(str).replace(/[₡,\s]/g, '').trim();
     const num = parseFloat(limpio);
     return isNaN(num) ? 0 : num;
 };
 
-const log = (msg, data) => {
-    console.log(`[Analizador] ${msg}`, data !== undefined ? data : '');
-};
-
 // ============================================
-// PARSER: OBRA.TXT (CORREGIDO PARA FORMATO REAL)
+// PARSER: OBRA.TXT (CORREGIDO)
 // ============================================
 function parsearObra(texto) {
-    log('Iniciando parseo de obra.txt');
+    console.log('[OBRA] Iniciando parseo...');
     const lineas = texto.split('\n').filter(l => l.trim());
-    log(`Total líneas en obra: ${lineas.length}`);
+    console.log(`[OBRA] Total líneas: ${lineas.length}`);
     
     const categorias = [];
     let categoriaActual = null;
@@ -43,80 +38,84 @@ function parsearObra(texto) {
         const linea = lineas[i];
         const campos = linea.split('\t');
         
-        // Buscar el índice donde está "Monto Total" (el header se repite en cada línea)
+        // Buscar "Monto Total" para encontrar el inicio del contenido variable
         const idxMontoTotal = campos.findIndex(c => c && c.trim() === 'Monto Total');
+        if (idxMontoTotal < 0) continue;
         
-        if (idxMontoTotal < 0) {
-            log(`Línea ${i} sin "Monto Total": ${linea.substring(0, 50)}`);
-            continue;
+        // El contenido viene después de "Monto Total"
+        const contenido = campos.slice(idxMontoTotal + 1);
+        
+        // Buscar el primer campo significativo (que no sea info repetida)
+        let idxInicio = 0;
+        for (let j = 0; j < contenido.length; j++) {
+            const val = contenido[j] && contenido[j].trim();
+            if (val && !val.includes('COSTOS DE OBRA') && !val.includes('Monto:') && 
+                !val.includes('COSTOS DE PROYECTO') && !val.includes('ALTAMIRA') &&
+                val !== 'Movimiento' && val !== 'Código' && val !== 'Fecha' &&
+                val !== 'Cantidad' && val !== 'Unidad' && val !== 'Monto Total' &&
+                val !== 'Monto Unitario' && val !== 'Detalle') {
+                idxInicio = j;
+                break;
+            }
         }
         
-        // Después de "Monto Total" viene el contenido variable
-        const resto = campos.slice(idxMontoTotal + 1).map(c => c && c.trim());
+        const primerCampo = contenido[idxInicio] && contenido[idxInicio].trim();
         
-        // Detectar si es línea de categoría o de movimiento
-        // Categoría: empieza con código numérico seguido de nombre en texto
-        // Movimiento: empieza con SALIDA, SALIDA M.O., o DEVOLUCIÓN
+        if (!primerCampo) continue;
         
-        const primerCampo = resto[0];
-        
-        if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ“N'].includes(primerCampo)) {
-            // Es un MOVIMIENTO
-            // Formato: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNITARIO
+        // Detectar si es movimiento o categoría
+        if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ"ÓN'].includes(primerCampo)) {
+            // MOVIMIENTO: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNITARIO
             const tipo = primerCampo;
-            const codigo = resto[1];
-            const fecha = resto[2];
-            const cantidad = parsearMonto(resto[3]);
-            const unidad = resto[4];
-            const montoTotal = parsearMonto(resto[5]);
+            const codigo = contenido[idxInicio + 1] && contenido[idxInicio + 1].trim();
+            const fecha = contenido[idxInicio + 2] && contenido[idxInicio + 2].trim();
+            const cantidadStr = contenido[idxInicio + 3] && contenido[idxInicio + 3].trim();
+            const unidad = contenido[idxInicio + 4] && contenido[idxInicio + 4].trim();
+            const montoTotalStr = contenido[idxInicio + 5] && contenido[idxInicio + 5].trim();
             
-            log(`  Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
+            const cantidad = parsearMonto(cantidadStr);
+            const montoTotal = parsearMonto(montoTotalStr);
             
             if (categoriaActual) {
                 categoriaActual.movimientos.push({
                     tipo, codigo, fecha, cantidad, unidad, montoTotal
                 });
-            } else {
-                log(`  ⚠️ Movimiento sin categoría previa: #${codigo}`);
+                console.log(`[OBRA] Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
             }
         } else if (/^\d+$/.test(primerCampo)) {
-            // Es una CATEGORÍA
-            // Formato: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
+            // CATEGORÍA: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
             const codigo = primerCampo;
-            const nombre = resto[1];
-            const cantidad = parsearMonto(resto[2]);
-            const unidad = resto[3];
-            const montoUnitario = parsearMonto(resto[4]);
-            const montoTotal = parsearMonto(resto[5]);
+            const nombre = contenido[idxInicio + 1] && contenido[idxInicio + 1].trim();
+            const cantidadStr = contenido[idxInicio + 2] && contenido[idxInicio + 2].trim();
+            const unidad = contenido[idxInicio + 3] && contenido[idxInicio + 3].trim();
+            const montoUnitarioStr = contenido[idxInicio + 4] && contenido[idxInicio + 4].trim();
+            const montoTotalStr = contenido[idxInicio + 5] && contenido[idxInicio + 5].trim();
             
-            log(`  Categoría: ${codigo} - ${nombre} (total: ${montoTotal})`);
+            const cantidad = parsearMonto(cantidadStr);
+            const montoUnitario = parsearMonto(montoUnitarioStr);
+            const montoTotal = parsearMonto(montoTotalStr);
             
             categoriaActual = {
-                codigo,
-                nombre,
-                cantidad,
-                unidad,
-                montoUnitario,
-                montoTotal,
-                movimientos: []
+                codigo, nombre, cantidad, unidad, montoUnitario, montoTotal, movimientos: []
             };
             categorias.push(categoriaActual);
+            console.log(`[OBRA] Categoría: ${codigo} - ${nombre} (total: ${montoTotal})`);
         }
     }
 
     const totalGeneral = categorias.reduce((s, c) => s + c.montoTotal, 0);
-    log(`Parseo obra completado: ${categorias.length} categorías, total: ${totalGeneral}`);
+    console.log(`[OBRA] Parseo completado: ${categorias.length} categorías, total: ${totalGeneral}`);
     
     return { categorias, totalGeneral };
 }
 
 // ============================================
-// PARSER: PROCESO.TXT (CORREGIDO PARA FORMATO REAL)
+// PARSER: PROCESO.TXT (CORREGIDO)
 // ============================================
 function parsearProceso(texto) {
-    log('Iniciando parseo de proceso.txt');
+    console.log('[PROCESO] Iniciando parseo...');
     const lineas = texto.split('\n').filter(l => l.trim());
-    log(`Total líneas en proceso: ${lineas.length}`);
+    console.log(`[PROCESO] Total líneas: ${lineas.length}`);
     
     const asientos = [];
     let totalDebitos = 0, totalCreditos = 0, saldoFinal = 0;
@@ -125,48 +124,56 @@ function parsearProceso(texto) {
         const linea = lineas[i];
         const campos = linea.split('\t');
         
-        // Buscar el índice donde está "Saldo" (el header se repite en cada línea)
+        // Buscar "Saldo" para encontrar el inicio del contenido variable
         const idxSaldo = campos.findIndex(c => c && c.trim() === 'Saldo');
+        if (idxSaldo < 0) continue;
         
-        if (idxSaldo < 0) {
-            log(`Línea ${i} sin "Saldo": ${linea.substring(0, 50)}`);
-            continue;
+        // El contenido viene después de "Saldo"
+        const contenido = campos.slice(idxSaldo + 1);
+        
+        // Buscar el primer campo significativo
+        let idxInicio = 0;
+        for (let j = 0; j < contenido.length; j++) {
+            const val = contenido[j] && contenido[j].trim();
+            if (val && !val.includes('Total') && !val.includes('Acumulado') && 
+                val !== 'Cuenta Contable' && val !== 'Descripción' && 
+                val !== 'Débitos' && val !== 'Créditos') {
+                idxInicio = j;
+                break;
+            }
         }
         
-        // Después de "Saldo" viene el contenido variable
-        const resto = campos.slice(idxSaldo + 1).map(c => c && c.trim());
+        const primerCampo = contenido[idxInicio] && contenido[idxInicio].trim();
         
-        // Detectar tipo de línea
-        const primerCampo = resto[0];
+        if (!primerCampo) continue;
         
         // Línea de totales de la cuenta
         if (primerCampo === '06-02-01-04-01') {
-            // Formato: CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
-            totalDebitos = parsearMonto(resto[2]);
-            totalCreditos = parsearMonto(resto[3]);
-            saldoFinal = parsearMonto(resto[4]);
-            log(`  Totales cuenta: deb=${totalDebitos} cred=${totalCreditos} saldo=${saldoFinal}`);
+            // CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
+            totalDebitos = parsearMonto(contenido[idxInicio + 2]);
+            totalCreditos = parsearMonto(contenido[idxInicio + 3]);
+            saldoFinal = parsearMonto(contenido[idxInicio + 4]);
+            console.log(`[PROCESO] Totales: deb=${totalDebitos} cred=${totalCreditos} saldo=${saldoFinal}`);
             continue;
         }
         
-        // Línea de asiento: debe empezar con fecha DD-MM-YYYY
+        // Asiento: FECHA | NUMERO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
         if (/^\d{2}-\d{2}-\d{4}$/.test(primerCampo)) {
             const fecha = primerCampo;
-            const numero = resto[1];
-            const descripcion = resto[2];
-            const debitos = parsearMonto(resto[3]);
-            const creditos = parsearMonto(resto[4]);
-            const saldo = parsearMonto(resto[5]);
-            
-            log(`  Asiento: ${fecha} #${numero} - ${descripcion.substring(0, 40)}... deb=${debitos} cred=${creditos}`);
+            const numero = contenido[idxInicio + 1] && contenido[idxInicio + 1].trim();
+            const descripcion = contenido[idxInicio + 2] && contenido[idxInicio + 2].trim();
+            const debitos = parsearMonto(contenido[idxInicio + 3]);
+            const creditos = parsearMonto(contenido[idxInicio + 4]);
+            const saldo = parsearMonto(contenido[idxInicio + 5]);
             
             asientos.push({
                 fecha, numero, descripcion, debitos, creditos, saldo
             });
+            console.log(`[PROCESO] Asiento: ${fecha} #${numero} - ${descripcion.substring(0, 40)}...`);
         }
     }
 
-    log(`Parseo proceso completado: ${asientos.length} asientos, saldo final: ${saldoFinal}`);
+    console.log(`[PROCESO] Parseo completado: ${asientos.length} asientos, saldo final: ${saldoFinal}`);
     
     return { asientos, totalDebitos, totalCreditos, saldoFinal };
 }
@@ -175,15 +182,15 @@ function parsearProceso(texto) {
 // MOTOR DE COMPARACIÓN
 // ============================================
 function compararArchivos(obra, proceso) {
-    log('Iniciando comparación...');
-    const reqObra = new Map();
+    console.log('[COMPARACIÓN] Iniciando...');
+    const reqMap = new Map();
     
-    // Extraer requisiciones de obra
+    // Extraer de obra
     for (const cat of obra.categorias) {
         for (const mov of cat.movimientos) {
             const key = mov.codigo;
-            if (!reqObra.has(key)) {
-                reqObra.set(key, {
+            if (!reqMap.has(key)) {
+                reqMap.set(key, {
                     codigo: mov.codigo,
                     tipo: mov.tipo,
                     fecha: mov.fecha,
@@ -192,13 +199,11 @@ function compararArchivos(obra, proceso) {
                     montoProceso: 0
                 });
             }
-            reqObra.get(key).montoObra += mov.montoTotal;
+            reqMap.get(key).montoObra += mov.montoTotal;
         }
     }
 
-    log(`Requisiciones en obra: ${reqObra.size}`);
-
-    // Extraer requisiciones de proceso
+    // Extraer de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/i);
         if (match) {
@@ -207,10 +212,10 @@ function compararArchivos(obra, proceso) {
             const monto = esDevolucion ? asiento.creditos : asiento.debitos;
             const montoConSigno = esDevolucion ? -monto : monto;
 
-            if (reqObra.has(codigo)) {
-                reqObra.get(codigo).montoProceso += montoConSigno;
+            if (reqMap.has(codigo)) {
+                reqMap.get(codigo).montoProceso += montoConSigno;
             } else {
-                reqObra.set(codigo, {
+                reqMap.set(codigo, {
                     codigo,
                     tipo: esDevolucion ? 'DEVOLUCIÓN' : 'SALIDA',
                     fecha: asiento.fecha,
@@ -222,14 +227,11 @@ function compararArchivos(obra, proceso) {
         }
     }
 
-    log(`Total requisiciones únicas: ${reqObra.size}`);
-
-    // Clasificar resultados
     const coincidencias = [];
     const diferencias = [];
     let totalDiferencia = 0;
 
-    for (const [_, req] of reqObra) {
+    for (const [_, req] of reqMap) {
         req.diferencia = Math.abs(req.montoObra - req.montoProceso);
         if (req.diferencia < 0.02) {
             coincidencias.push(req);
@@ -239,16 +241,14 @@ function compararArchivos(obra, proceso) {
         }
     }
 
-    log(`Coincidencias: ${coincidencias.length}, Diferencias: ${diferencias.length}`);
-
-    // Asientos especiales (sin requisición)
     const asientosEspeciales = proceso.asientos.filter(a => 
         !/REQUISICION|DEVOLUCION/i.test(a.descripcion)
     );
-    log(`Asientos especiales: ${asientosEspeciales.length}`);
+
+    console.log(`[COMPARACIÓN] Total: ${reqMap.size}, Coincidencias: ${coincidencias.length}, Diferencias: ${diferencias.length}`);
 
     return {
-        requisiciones: Array.from(reqObra.values()),
+        requisiciones: Array.from(reqMap.values()),
         coincidencias,
         diferencias,
         totalDiferencia,
@@ -262,9 +262,10 @@ function compararArchivos(obra, proceso) {
 // RENDERIZADO
 // ============================================
 function renderizarResultados(resultado) {
+    console.log('[RENDER] Iniciando...');
     const divResultados = document.getElementById('resultados');
     if (!divResultados) {
-        alert('Error: no se encontró el contenedor de resultados. Revisa el HTML.');
+        alert('Error: No se encontró el div "resultados"');
         return;
     }
     
@@ -281,18 +282,16 @@ function renderizarResultados(resultado) {
     cardDiff.className = 'card shadow-sm h-100 ' + 
         (Math.abs(resultado.totalDiferencia) < 1 ? 'text-bg-success' : 'text-bg-warning');
 
-    // Resumen
     document.getElementById('contenidoResumen').innerHTML = `
         <div class="alerta-info mb-3">
             <h6><i class="bi bi-info-circle"></i> Resumen del Análisis</h6>
-            <p class="mb-1">• <strong>Total reportado en OBRA:</strong> ₡${formatearMonto(resultado.totalObra)}</p>
-            <p class="mb-1">• <strong>Saldo final en PROCESO:</strong> ₡${formatearMonto(resultado.totalProceso)}</p>
-            <p class="mb-1">• <strong>Diferencia global:</strong> ₡${formatearMonto(resultado.totalDiferencia)}</p>
-            <p class="mb-0">• <strong>Asientos especiales (planillas, CCSS, intereses):</strong> 
-                ${resultado.asientosEspeciales.length}</p>
+            <p class="mb-1">• <strong>Total OBRA:</strong> ₡${formatearMonto(resultado.totalObra)}</p>
+            <p class="mb-1">• <strong>Total PROCESO:</strong> ₡${formatearMonto(resultado.totalProceso)}</p>
+            <p class="mb-1">• <strong>Diferencia:</strong> ₡${formatearMonto(resultado.totalDiferencia)}</p>
+            <p class="mb-0">• <strong>Asientos especiales:</strong> ${resultado.asientosEspeciales.length}</p>
         </div>
         ${resultado.asientosEspeciales.length > 0 ? `
-        <h6 class="mt-4">Asientos sin requisición directa:</h6>
+        <h6 class="mt-4">Asientos sin requisición:</h6>
         <div class="table-responsive">
             <table class="table table-sm table-striped">
                 <thead><tr><th>Fecha</th><th>Descripción</th><th>Débitos</th><th>Créditos</th></tr></thead>
@@ -302,7 +301,7 @@ function renderizarResultados(resultado) {
                             <td>${a.fecha}</td>
                             <td>${a.descripcion}</td>
                             <td class="monto-positivo">${a.debitos ? '₡'+formatearMonto(a.debitos) : '-'}</td>
-                            <td class="monto-negativo">${a.creditos ? ''+formatearMonto(a.creditos) : '-'}</td>
+                            <td class="monto-negativo">${a.creditos ? '₡'+formatearMonto(a.creditos) : '-'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -310,11 +309,10 @@ function renderizarResultados(resultado) {
         </div>` : ''}
     `;
 
-    // Coincidencias
     document.getElementById('contenidoCuadradas').innerHTML = `
         <div class="alert alert-success">
             <i class="bi bi-check-circle"></i> 
-            <strong>${resultado.coincidencias.length}</strong> requisiciones cuadran exactamente.
+            <strong>${resultado.coincidencias.length}</strong> requisiciones cuadran.
         </div>
         <div class="table-responsive">
             <table class="table table-hover table-sm">
@@ -338,12 +336,11 @@ function renderizarResultados(resultado) {
         </div>
     `;
 
-    // Diferencias
     document.getElementById('contenidoDiferencias').innerHTML = resultado.diferencias.length === 0 ?
-        `<div class="alert alert-success"><i class="bi bi-check-circle"></i> ¡No hay diferencias!</div>` :
+        `<div class="alert alert-success"><i class="bi bi-check-circle"></i> ¡Sin diferencias!</div>` :
         `<div class="alerta-danger mb-3">
             <i class="bi bi-exclamation-triangle"></i> 
-            <strong>${resultado.diferencias.length}</strong> requisiciones presentan diferencias.
+            <strong>${resultado.diferencias.length}</strong> con diferencias.
         </div>
         <div class="table-responsive">
             <table class="table table-hover table-sm">
@@ -368,7 +365,7 @@ function renderizarResultados(resultado) {
             </table>
         </div>`;
     
-    log('Resultados renderizados en el DOM');
+    console.log('[RENDER] Completado');
 }
 
 // ============================================
@@ -405,7 +402,7 @@ function exportarJSON() {
 // INICIALIZACIÓN
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    log('=== DOM Cargado ===');
+    console.log('=== DOM Cargado ===');
     
     const fileObra = document.getElementById('fileObra');
     const fileProceso = document.getElementById('fileProceso');
@@ -413,102 +410,77 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnLimpiar = document.getElementById('btnLimpiar');
     const btnExportarCSV = document.getElementById('btnExportarCSV');
     const btnExportarJSON = document.getElementById('btnExportarJSON');
-    const divResultados = document.getElementById('resultados');
-
-    // Verificar que todos los elementos existan
-    const elementos = { fileObra, fileProceso, btnAnalizar, btnLimpiar, divResultados };
-    for (const [nombre, elem] of Object.entries(elementos)) {
-        if (!elem) {
-            console.error(`❌ Elemento "${nombre}" NO encontrado en el DOM`);
-        } else {
-            log(`✅ Elemento "${nombre}" encontrado`);
-        }
-    }
 
     if (!fileObra || !fileProceso || !btnAnalizar) {
-        alert('Error: No se encontraron los elementos necesarios en el HTML. Revisa los IDs.');
+        console.error('❌ Faltan elementos en el DOM');
         return;
     }
 
-    // Validar archivos
+    console.log('✅ Elementos encontrados');
+
     function validarArchivos() {
-        const archivosListos = fileObra.files.length > 0 && fileProceso.files.length > 0;
-        btnAnalizar.disabled = !archivosListos;
-        log(`Validación: Obra=${fileObra.files.length} archivos, Proceso=${fileProceso.files.length} archivos -> Botón ${archivosListos ? 'HABILITADO' : 'DESHABILITADO'}`);
+        const listos = fileObra.files.length > 0 && fileProceso.files.length > 0;
+        btnAnalizar.disabled = !listos;
+        console.log(`Archivos: Obra=${fileObra.files.length}, Proceso=${fileProceso.files.length} -> ${listos ? 'HABILITADO' : 'DESHABILITADO'}`);
     }
 
     fileObra.addEventListener('change', () => {
-        log(`Archivo obra seleccionado: ${fileObra.files[0]?.name} (${fileObra.files[0]?.size} bytes)`);
+        console.log(`Archivo obra: ${fileObra.files[0]?.name}`);
         validarArchivos();
     });
     
     fileProceso.addEventListener('change', () => {
-        log(`Archivo proceso seleccionado: ${fileProceso.files[0]?.name} (${fileProceso.files[0]?.size} bytes)`);
+        console.log(`Archivo proceso: ${fileProceso.files[0]?.name}`);
         validarArchivos();
     });
 
-    // Botón Analizar
     btnAnalizar.addEventListener('click', async function() {
-        log('🔵 Click en Analizar');
+        console.log('🔵 Click en ANALIZAR');
         
         try {
             if (!fileObra.files[0] || !fileProceso.files[0]) {
-                alert('Por favor selecciona ambos archivos primero.');
+                alert('Selecciona ambos archivos');
                 return;
             }
 
             btnAnalizar.disabled = true;
             btnAnalizar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Analizando...';
 
-            log('Leyendo archivos...');
             const textoObra = await fileObra.files[0].text();
             const textoProceso = await fileProceso.files[0].text();
 
-            log(`Texto obra: ${textoObra.length} caracteres, ${textoObra.split('\n').length} líneas`);
-            log(`Texto proceso: ${textoProceso.length} caracteres, ${textoProceso.split('\n').length} líneas`);
+            console.log(`Textos leídos: Obra=${textoObra.length} chars, Proceso=${textoProceso.length} chars`);
 
-            log('Parseando obra...');
             datosObra = parsearObra(textoObra);
-            log(`Resultado obra: ${datosObra.categorias.length} categorías`);
-
-            log('Parseando proceso...');
             datosProceso = parsearProceso(textoProceso);
-            log(`Resultado proceso: ${datosProceso.asientos.length} asientos`);
 
-            log('Comparando...');
             resultadoAnalisis = compararArchivos(datosObra, datosProceso);
 
-            log('Renderizando...');
             renderizarResultados(resultadoAnalisis);
             
-            log('✅ Análisis completado exitosamente');
+            console.log('✅ Análisis completado');
         } catch (error) {
             console.error('❌ Error:', error);
-            alert('Error al procesar: ' + error.message + '\n\nRevisa la consola (F12) para más detalles.');
+            alert('Error: ' + error.message);
         } finally {
             btnAnalizar.disabled = false;
             btnAnalizar.innerHTML = '<i class="bi bi-gear"></i> Analizar Archivos';
         }
     });
 
-    // Botón Limpiar
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', function() {
-            log('Limpiando todo...');
+            console.log('Limpiando...');
             fileObra.value = '';
             fileProceso.value = '';
-            if (divResultados) divResultados.style.display = 'none';
+            document.getElementById('resultados').style.display = 'none';
             btnAnalizar.disabled = true;
-            datosObra = null;
-            datosProceso = null;
-            resultadoAnalisis = null;
-            log('✅ Limpieza completada');
+            datosObra = datosProceso = resultadoAnalisis = null;
         });
     }
 
-    // Exportación
     if (btnExportarCSV) btnExportarCSV.addEventListener('click', exportarCSV);
     if (btnExportarJSON) btnExportarJSON.addEventListener('click', exportarJSON);
 
-    log('=== Inicialización completada ===');
+    console.log('=== Inicialización completada ===');
 });
