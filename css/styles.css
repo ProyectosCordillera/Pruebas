@@ -1,536 +1,63 @@
-/* ------------------ Estilos generales ------------------ */
 body {
-    font-family: Arial, sans-serif;
-    padding: 10mm;
-    line-height: 1.4;
-    font-size: 12pt; /* Cambiado a 12pt */
-    background-color: #ffffff;
-    padding-bottom: 60px;
+    background-color: #f4f6f9;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
 }
 
-.logo-container {
-    margin-left: -15px;
-    padding-left: 0;
+.card {
+    border-radius: 10px;
+    transition: transform 0.2s;
 }
 
-/* Este es el contenedor principal */
-#Hoja1.container {
-    width: 210mm;
-    min-height: 297mm;
-    margin: 0 auto;
-    padding: 10mm;
-    background: white;
-    box-sizing: border-box;
-     text-align: justify;   /* ⭐ ESTA ES LA LÍNEA QUE FALTA */
+.card:hover {
+    transform: translateY(-2px);
 }
 
-/* ------------------ Texto y párrafos ------------------ */
-.Cuerp1 {
-    font-size: 12pt; /* Cambiado a 12pt */
-    text-align: justify;
-    line-height: 1.3;
-  
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
 }
 
-
-
-/* ------------------ Dropdowns personalizados ------------------ */
-.dropdown-custom-Incluye,
-.dropdown-custom-Tipoparqueo,
-.dropdown-custom-TipoApto,
-.dropdown-custom-Estado,
-.dropdown-custom-Torre,
-.dropdown-custom-Apto,
-.dropdown-custom-Piso,
-.dropdown-custom-Dia,
-.dropdown-custom-Mes,
-.dropdown-custom-Ano,
-.dropdown-custom-Casa,
-.dropdown-Tipo-casa {
-    font-family: Arial, sans-serif;
-    font-size: 12pt; /* Cambiado a 12pt */
-    font-weight: bold;
-    display: inline-block;
-    border: none;
-    outline: none;
-    vertical-align: bottom;
-    margin: 0 3px;
-    padding: 0 2px;
-    background: transparent;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    border-bottom: 1px solid #000;
-    min-height: 24px;
-}
-
-.dropdown-custom-Torre {
-    font-family: Arial, sans-serif;
-    font-size: 22px;
-    font-weight: bold;
-}
-
-.dropdown-custom-Casa {
-    font-family: Arial, sans-serif;
-    font-size: 22px;
-    font-weight: bold;
-    border-bottom: none !important;
-    outline: none !important;
-}
-
-.dropdown-custom-Piso {
-    font-family: Arial, sans-serif;
-    font-size: 22px;
-    font-weight: bold;
-}
-
-.dropdown-custom-Estado { min-width: 80px; }
-.dropdown-custom-Dia    { min-width: 10px; text-align: center; }
-.dropdown-custom-Mes    { min-width: 80px; text-align: center; }
-.dropdown-custom-Ano    { min-width: 40px; text-align: center; }
-
-/* ------------------ Encabezado ------------------ */
-.Encabe {
-    font-family: Arial, sans-serif;
-    font-size: 23px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.Encabe2 {
-    font-family: Arial, sans-serif;
-    font-size: 22px;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 15px;
-    text-decoration: none !important;
-    border-bottom: none !important;
-}
-
-/* ------------------ Campos de texto con subrayado ------------------ */
-.underline,
-.underlineNumCasa,
-.underline-lote,
-.underlineId,
-.underlineNumcuota,
-.underlinetel1,
-.underlinetel2,
-.underlineNacionalidad,
-.underlineMontoLetras,
-.underlineDireccion,
-.underlineDireccion2,
-.underlineddl,
-.underlineP,
-.underlineOficio,
-.underline-direcionbanco,
-.underlineNombre,
-.underlineMontos,
-.underlineCuentaCliente,
-.underlineCorreo1,
-.underlineCorreo2{
-    display: inline-block;
-    font-family: Arial, sans-serif;
-    font-size: 12pt; /* Cambiado a 12pt */
-    font-weight: normal;
-    text-decoration: none;
-    border: none;
-    border-bottom: 1px solid #000;
-    background-color: transparent;
-    outline: none;
-    height: 16px;
-    vertical-align: bottom;
-    margin: 0 3px;
-    padding: 0 2px;
-}
-
-.connected-input {
-    display: inline-block;
-}
-
-.address-container {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin: 10px 0;
-}
-
-/* Anchos específicos */
-.underlineNumcuota { width: 40px; min-width: 40px; }
-.underlineNumCasa { width: 70px; min-width: 70px; }
-.underline-lote { width: 80px; min-width: 80px; }
-.underline-tipocasa { width: 80px; min-width: 80px; font-weight: bold; }
-.underlineId { width: 220px; min-width: 220px; }
-.underlinetel1 { width: 220px; min-width: 220px; }
-.underlinetel2 { width: 220px; min-width: 220px; }
-.underlineNombre { width: 335px; min-width: 335px; }
-.underline-direcionbanco { width: 430px; min-width: 430px; }
-.underlineMontoLetras { width: 200px; min-width: 200px; }
-.underlineMontos { width: 120px; min-width: 120px; text-align: right; font-family: monospace; }
-.underlineNacionalidad { width: 150px; min-width: 150px; }
-.underline { width: 150px; min-width: 150px; }
-.underlineDireccion { width: 320px; min-width: 320px; }
-.underlineDireccion2 { width: 555px; min-width: 555px; }
-.underlineOficio { width: 220px; min-width: 220px; }
-.underlineddl { width: 30px; min-width: 30px; max-width: 40px; text-align: center; letter-spacing: 1px; font-weight: bold; }
-.underlineP { width: 300px; min-width: 300px; }
-.underlineCuentaCliente { width: 200px; min-width: 200px; }
-.underlineCorreo1 { width: 300px; min-width: 300px; }
-.underlineCorreo2 { width: 400px; min-width: 400px; }
-
-/* ------------------ Radios ------------------ */
-.radio-custom {
-    margin: 0 3px;
-    position: relative;
-    top: 2px;
-}
-
-.radio-group { display: inline; }
-
-/* ------------------ Secciones y alineación ------------------ */
-.form-inline-element { display: inline-block; vertical-align: baseline; }
-.section { margin-bottom: 15px; }
-.section-title { font-weight: bold; margin-bottom: 8px; }
-.apartment-types { font-size: 13px; line-height: 1.4; margin-bottom: 10px; }
-
-.two-column-table {
-    width: 100%;
-    table-layout: fixed;
-    font-size: 12pt; /* Cambiado a 12pt */
-    margin-top: 10px;
-    margin-bottom: 15px;
-}
-
-.left-column {
-    text-align: left;
-    vertical-align: top;
-    width: 65%;
-    padding-right: 10px;
-}
-
-.right-column {
-    text-align: right;
-    vertical-align: middle;
-    width: 35%;
-}
-
-.right-column-content {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    width: 100%;
-}
-
-.date-input {
-    font-size: 12pt;
-    width: 110px;  /* ← Aumentado de 90px a 110px */
-    border: none;
-    border-bottom: 1px solid #000;
-    background-color: transparent;
-    padding: 0;
-    margin: 0 3px;
-    transition: all 0.3s;
-}
-
-.date-input:focus {
-    outline: none;
-    border-bottom: 2px solid #0d6efd;
-}
-
-/* ------------------ Firmas ------------------ */
-.signature-section {
-    display: flex;
-    justify-content: space-between;
-    margin: 40px 0 30px 0;
-}
-
-.signature-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 0 10px;
-}
-
-.signature-line {
-    border-top: 1px solid #000000;
-    width: 250px;
-    margin-bottom: 8px;
-}
-
-.signature-name {
-    font-weight: bold;
-    font-size: 12pt; /* Cambiado a 12pt */
-    margin-bottom: 3px;
-    text-align: center;
-    width: 100%;
-}
-
-.signature-info {
-    font-size: 10pt;
-    color: #555;
-    line-height: 1.2;
-    text-align: center;
-    width: 100%;
-}
-
-/* ------------------ Responsive ------------------ */
-@media (max-width: 900px) {
-    .underlineNombre,
-    .underline-direcionbanco { width: 300px; min-width: 300px; }
-    .underline { width: 120px; min-width: 120px; }
-    .underlineDireccion { width: 250px; min-width: 250px; }
-    #Hoja1.container {
-        width: 100%;
-        max-width: 100%;
-        padding: 0.3in;
-    }
-}
-
-@media (max-width: 700px) {
-    .form-container { padding: 10px; }
-    .Encabe { font-size: 18px; }
-    .signature-section {
-        flex-direction: column;
-        gap: 30px;
-    }
-}
-
-/* ------------------ Estilos de impresión ------------------ */
-@media print {
-@page { /* ✅ MÁRGENES AJUSTADOS A 1.5 CM */ margin: 1.5cm; size: auto; }
-    
-    body {
-        padding: 0;
-        margin: 0;
-        background-color: white;
-        font-size: 12pt;
-    }
-    
-    .chbAplica {
-        display: none !important;
-    }
-    
-    #Hoja1.container {
-        box-shadow: none;
-        max-width: 100%;
-        /* ✅ Padding reducido para no duplicar márgenes con @page */
-        padding: 0 !important; 
-        min-height: auto !important;
-        margin: 0 !important;
-        width: 100% !important;
-    }
-    
-    .signature-section { margin: 20px 0 15px 0; }
-    
-     /* ✅ CLASE PAGE-BREAK */
-        .page-break {
-        margin: 0 !important;
-        padding: 0 !important;
-        break-before: page;
-        page-break-before: always;
-    }
-    
-  
-    
-    /* Evitar cortes en firmas */
-    .signature-section { page-break-inside: avoid; }
-    
-  /* ✅ MÁRGENES SUPERIORES CON MARGIN-TOP (MÁS EFECTIVO) */
-    #pagina2 { 
-        margin-top: 0.1cm !important;
-        padding-top: 0 !important;
-    }
-    
-    #pagina3 { 
-        margin-top: 0.1cm !important; /* ✅ VALOR PEQUEÑO PARA SUBIR TEXTO */
-        padding-top: 0 !important;
-    }
-    
-   
-    
-    /* Hide non-essential elements for print */
-    .no-print {
-        display: none !important;
-    }
-    
-    /* Asegurar que los inputs se vean limpios al imprimir */
-    input, select {
-        border: none !important;
-        border-bottom: 1px solid #000 !important;
-        background: transparent !important;
-        -webkit-print-color-adjust: exact;
-    }
-}
-
-/* ------------------ Checkbox custom styling ------------------ */
-.custom-checkbox {
-    display: inline-flex;
-    align-items: center;
-    margin: 10px 0;
-}
-
-.custom-checkbox input {
-    margin-right: 8px;
-    transform: scale(1.2);
-}
-
-/* ------------------ Panel de descuento ------------------ */
-.mensaje-descuento {
-    background-color: #e3f2fd;
-    border-left: 4px solid #2196f3;
-    padding: 12px 15px;
-    margin: 15px 0;
-    border-radius: 0 4px 4px 0;
-}
-
-/* ------------------ Botones de acción ------------------ */
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin: 25px 0;
-    flex-wrap: wrap;
-}
-
-.btn-action {
-    padding: 8px 20px;
-    border-radius: 4px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-print {
-    background-color: #2196f3;
+.table thead th {
+    position: sticky;
+    top: 0;
+    background: #343a40;
     color: white;
-    border: none;
+    z-index: 1;
 }
 
-.btn-print:hover {
-    background-color: #1976d2;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+.monto-positivo { color: #198754; font-weight: bold; }
+.monto-negativo { color: #dc3545; font-weight: bold; }
+.monto-cero { color: #6c757d; }
+
+.badge-cuadrada { background-color: #198754; }
+.badge-diferencia { background-color: #dc3545; }
+
+.animacion-carga {
+    animation: fadeIn 0.5s ease-in;
 }
 
-.btn-reset {
-    background-color: #f5f5f5;
-    color: #333;
-    border: 1px solid #ddd;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.btn-reset:hover {
-    background-color: #e0e0e0;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+.alerta-info {
+    background-color: #cff4fc;
+    border-left: 5px solid #0dcaf0;
+    padding: 1rem;
+    border-radius: 5px;
 }
 
-.btn-save {
-    background-color: #4caf50;
-    color: white;
-    border: none;
+.alerta-warning {
+    background-color: #fff3cd;
+    border-left: 5px solid #ffc107;
+    padding: 1rem;
+    border-radius: 5px;
 }
 
-.btn-save:hover {
-    background-color: #388e3c;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-/* ------------------ Page indicator ------------------ */
-.page-indicator {
-    text-align: center;
-    margin: 15px 0;
-    font-weight: bold;
-    color: #666;
-    font-size: 18px;
-}
-
-.no-print {
-    margin-top: 20px;
-    text-align: center;
-}
-
-/* ------------------ Highlight required fields ------------------ */
-.required {
-    color: #d32f2f;
-    font-weight: bold;
-    margin-left: 3px;
-}
-
-/* ==================== ELIMINAR RECUADROS ==================== */
-
-/* Para TODOS los inputs, selects y textareas */
-input,
-select,
-textarea {
-    border: none !important;
-    border-bottom: 1px solid #000 !important;
-    background-color: transparent !important;
-    background: transparent !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    border-radius: 0 !important;
-    padding: 2px 4px !important;
-}
-
-/* Específico para inputs de tipo date (tienen ícono de calendario) */
-input[type="date"] {
-    border: none !important;
-    border-bottom: 1px solid #000 !important;
-    background-color: transparent !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-}
-
-/* Ocultar el ícono de calendario en Chrome/Safari */
-input[type="date"]::-webkit-calendar-picker-indicator {
-    opacity: 0.5;
-    cursor: pointer;
-}
-
-/* Específico para selects (tienen flecha) */
-select {
-    border: none !important;
-    border-bottom: 1px solid #000 !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-    cursor: pointer;
-}
-
-/* ==================== PARA IMPRESIÓN ==================== */
-@media print {
-    input,
-    select,
-    textarea {
-        border: none !important;
-        border-bottom: 1px solid #000 !important;
-        background-color: transparent !important;
-        background: transparent !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
-        box-shadow: none !important;
-    }
-    
-    /* Ocultar ícono de calendario al imprimir */
-    input[type="date"]::-webkit-calendar-picker-indicator {
-        display: none !important;
-    }
-    
-    /* Forzar que no haya fondos en nada */
-    * {
-        background: transparent !important;
-        background-color: transparent !important;
-        box-shadow: none !important;
-    }
+.alerta-danger {
+    background-color: #f8d7da;
+    border-left: 5px solid #dc3545;
+    padding: 1rem;
+    border-radius: 5px;
 }
