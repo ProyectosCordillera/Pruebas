@@ -1,11 +1,10 @@
-
 // ============================================
 // ESTADO GLOBAL
 // ============================================
 let datosObra = null;
 let datosProceso = null;
 let resultadoAnalisis = null;
-let metadatosObra = null; // <-- NUEVO: para guardar info del proyecto
+let metadatosObra = null;
 
 // ============================================
 // UTILIDADES
@@ -26,7 +25,7 @@ const parsearMonto = (str) => {
 };
 
 // ============================================
-// NUEVO: Extraer metadatos del proyecto
+// EXTRAER METADATOS
 // ============================================
 function extraerMetadatos(texto) {
     const primeraLinea = texto.split('\n')[0];
@@ -34,18 +33,14 @@ function extraerMetadatos(texto) {
     
     const campos = primeraLinea.split('\t');
     
-    // Buscar "Proyecto:" y tomar el siguiente valor
     const idxProyecto = campos.findIndex(c => c && c.trim() === 'Proyecto:');
     const idxObra = campos.findIndex(c => c && c.trim() === 'Obra:');
-    const idxActividad = campos.findIndex(c => c && c.trim() === 'Actividad:');
     
     const proyecto = idxProyecto >= 0 ? campos[idxProyecto + 1] : 'N/A';
     const obra = idxObra >= 0 ? campos[idxObra + 1] : 'N/A';
     
-    // El nombre de la obra viene después de "Obra: XXXX"
     let nombreObra = 'N/A';
     if (idxObra >= 0 && campos[idxObra + 2]) {
-        // Puede ser "COSTOS DE OBRA ALTAMIRA" o similar
         nombreObra = campos[idxObra + 2].replace(/COSTOS DE OBRA\s*/i, '').trim();
         if (!nombreObra) nombreObra = campos[idxObra + 2].trim();
     }
@@ -57,9 +52,6 @@ function extraerMetadatos(texto) {
     };
 }
 
-// ============================================
-// NUEVO: Actualizar el título dinámicamente
-// ============================================
 function actualizarTituloProyecto(meta) {
     const spanInfo = document.getElementById('infoProyecto');
     if (!spanInfo || !meta) return;
@@ -70,14 +62,11 @@ function actualizarTituloProyecto(meta) {
         Obra <strong>${meta.obra}</strong> (${meta.nombreObra})
     `;
     
-    // También actualizar el título de la página
     document.title = `Analizador Contable - Proyecto ${meta.proyecto} - Obra ${meta.obra}`;
-    
-    console.log(`[META] Proyecto: ${meta.proyecto}, Obra: ${meta.obra}, Nombre: ${meta.nombreObra}`);
 }
 
 // ============================================
-// PARSER: OBRA.TXT
+// PARSER: OBRA.TXT (CORREGIDO)
 // ============================================
 function parsearObra(texto) {
     console.log('[OBRA] Iniciando parseo...');
@@ -90,23 +79,37 @@ function parsearObra(texto) {
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
         
-        const idxMontoTotal = linea.indexOf('Monto Total\t');
-        if (idxMontoTotal < 0) continue;
+        // Buscar la primera ocurrencia de "Monto Total" (headers iniciales)
+        const idxMontoTotal1 = linea.indexOf('Monto Total');
+        if (idxMontoTotal1 < 0) continue;
         
-        const contenidoCompleto = linea.substring(idxMontoTotal + 'Monto Total\t'.length);
+        // Buscar la segunda ocurrencia de "Monto Total" (headers finales)
+        const idxMontoTotal2 = linea.indexOf('Monto Total', idxMontoTotal1 + 1);
         
-        const idxFin = contenidoCompleto.indexOf('\tCOSTOS DE OBRA');
-        const contenidoVariable = idxFin >= 0 ? 
-            contenidoCompleto.substring(0, idxFin) : 
-            contenidoCompleto;
+        // El contenido variable está entre la primera y segunda ocurrencia
+        let contenidoVariable;
+        if (idxMontoTotal2 > 0) {
+            contenidoVariable = linea.substring(idxMontoTotal1 + 'Monto Total'.length, idxMontoTotal2);
+        } else {
+            // Si no hay segunda ocurrencia, buscar "Movimiento"
+            const idxMovimiento = linea.indexOf('Movimiento', idxMontoTotal1);
+            if (idxMovimiento > 0) {
+                contenidoVariable = linea.substring(idxMontoTotal1 + 'Monto Total'.length, idxMovimiento);
+            } else {
+                continue;
+            }
+        }
         
-        const campos = contenidoVariable.split('\t').map(c => c.trim());
+        // Limpiar y dividir por tabs
+        const campos = contenidoVariable.split('\t').map(c => c.trim()).filter(c => c);
         
         if (campos.length < 6) continue;
         
         const primerCampo = campos[0];
         
+        // Detectar si es movimiento o categoría
         if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ"ÓN'].includes(primerCampo)) {
+            // MOVIMIENTO: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNITARIO
             const tipo = primerCampo;
             const codigo = campos[1];
             const fecha = campos[2];
@@ -122,6 +125,7 @@ function parsearObra(texto) {
                 });
             }
         } else if (/^\d+$/.test(primerCampo)) {
+            // CATEGORÍA: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
             const codigo = primerCampo;
             const nombre = campos[1];
             const cantidad = parsearMonto(campos[2]);
@@ -145,7 +149,7 @@ function parsearObra(texto) {
 }
 
 // ============================================
-// PARSER: PROCESO.TXT
+// PARSER: PROCESO.TXT (CORREGIDO)
 // ============================================
 function parsearProceso(texto) {
     console.log('[PROCESO] Iniciando parseo...');
@@ -158,23 +162,30 @@ function parsearProceso(texto) {
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
         
-        const idxSaldo = linea.indexOf('Saldo\t');
+        // Buscar "Saldo" en los headers iniciales
+        const idxSaldo = linea.indexOf('Saldo');
         if (idxSaldo < 0) continue;
         
-        const contenidoCompleto = linea.substring(idxSaldo + 'Saldo\t'.length);
+        // Buscar "Total Saldo Anterior" para encontrar el final
+        const idxTotalSaldo = linea.indexOf('Total Saldo Anterior');
         
-        const idxFin = contenidoCompleto.indexOf('\tTotal Saldo Anterior');
-        const contenidoVariable = idxFin >= 0 ? 
-            contenidoCompleto.substring(0, idxFin) : 
-            contenidoCompleto;
+        let contenidoVariable;
+        if (idxTotalSaldo > 0) {
+            contenidoVariable = linea.substring(idxSaldo + 'Saldo'.length, idxTotalSaldo);
+        } else {
+            continue;
+        }
         
-        const campos = contenidoVariable.split('\t').map(c => c.trim());
+        // Limpiar y dividir por tabs
+        const campos = contenidoVariable.split('\t').map(c => c.trim()).filter(c => c);
         
         if (campos.length < 5) continue;
         
         const primerCampo = campos[0];
         
+        // Línea de totales de la cuenta
         if (primerCampo === '06-02-01-04-01') {
+            // CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
             totalDebitos = parsearMonto(campos[2]);
             totalCreditos = parsearMonto(campos[3]);
             saldoFinal = parsearMonto(campos[4]);
@@ -182,6 +193,7 @@ function parsearProceso(texto) {
             continue;
         }
         
+        // Asiento: FECHA | NUMERO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
         if (/^\d{2}-\d{2}-\d{4}$/.test(primerCampo)) {
             const fecha = primerCampo;
             const numero = campos[1];
@@ -210,6 +222,7 @@ function compararArchivos(obra, proceso) {
     console.log('[COMPARACIÓN] Iniciando...');
     const reqMap = new Map();
     
+    // Extraer de obra
     for (const cat of obra.categorias) {
         for (const mov of cat.movimientos) {
             const key = mov.codigo;
@@ -229,6 +242,7 @@ function compararArchivos(obra, proceso) {
 
     console.log(`[COMPARACIÓN] Requisiciones en obra: ${reqMap.size}`);
 
+    // Extraer de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/i);
         if (match) {
@@ -301,8 +315,8 @@ function renderizarResultados(resultado) {
     divResultados.classList.add('animacion-carga');
 
     document.getElementById('totalObra').textContent = '₡' + formatearMonto(resultado.totalObra);
-    document.getElementById('totalProceso').textContent = '' + formatearMonto(resultado.totalProceso);
-    document.getElementById('totalDiferencia').textContent = '' + formatearMonto(resultado.totalDiferencia);
+    document.getElementById('totalProceso').textContent = '₡' + formatearMonto(resultado.totalProceso);
+    document.getElementById('totalDiferencia').textContent = '₡' + formatearMonto(resultado.totalDiferencia);
     document.getElementById('totalCuadradas').textContent = 
         `${resultado.coincidencias.length} / ${resultado.requisiciones.length}`;
 
@@ -329,7 +343,7 @@ function renderizarResultados(resultado) {
                             <td>${a.fecha}</td>
                             <td>${a.descripcion}</td>
                             <td class="monto-positivo">${a.debitos ? '₡'+formatearMonto(a.debitos) : '-'}</td>
-                            <td class="monto-negativo">${a.creditos ? ''+formatearMonto(a.creditos) : '-'}</td>
+                            <td class="monto-negativo">${a.creditos ? '₡'+formatearMonto(a.creditos) : '-'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -479,7 +493,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log(`Textos leídos: Obra=${textoObra.length} chars, Proceso=${textoProceso.length} chars`);
 
-            // NUEVO: Extraer y mostrar metadatos del proyecto
             metadatosObra = extraerMetadatos(textoObra);
             if (metadatosObra) {
                 actualizarTituloProyecto(metadatosObra);
@@ -512,7 +525,6 @@ document.addEventListener('DOMContentLoaded', function() {
             datosObra = datosProceso = resultadoAnalisis = null;
             metadatosObra = null;
             
-            // Resetear el título
             const spanInfo = document.getElementById('infoProyecto');
             if (spanInfo) {
                 spanInfo.innerHTML = 'Sin archivos cargados';
