@@ -1,9 +1,11 @@
+
 // ============================================
 // ESTADO GLOBAL
 // ============================================
 let datosObra = null;
 let datosProceso = null;
 let resultadoAnalisis = null;
+let metadatosObra = null; // <-- NUEVO: para guardar info del proyecto
 
 // ============================================
 // UTILIDADES
@@ -24,6 +26,57 @@ const parsearMonto = (str) => {
 };
 
 // ============================================
+// NUEVO: Extraer metadatos del proyecto
+// ============================================
+function extraerMetadatos(texto) {
+    const primeraLinea = texto.split('\n')[0];
+    if (!primeraLinea) return null;
+    
+    const campos = primeraLinea.split('\t');
+    
+    // Buscar "Proyecto:" y tomar el siguiente valor
+    const idxProyecto = campos.findIndex(c => c && c.trim() === 'Proyecto:');
+    const idxObra = campos.findIndex(c => c && c.trim() === 'Obra:');
+    const idxActividad = campos.findIndex(c => c && c.trim() === 'Actividad:');
+    
+    const proyecto = idxProyecto >= 0 ? campos[idxProyecto + 1] : 'N/A';
+    const obra = idxObra >= 0 ? campos[idxObra + 1] : 'N/A';
+    
+    // El nombre de la obra viene después de "Obra: XXXX"
+    let nombreObra = 'N/A';
+    if (idxObra >= 0 && campos[idxObra + 2]) {
+        // Puede ser "COSTOS DE OBRA ALTAMIRA" o similar
+        nombreObra = campos[idxObra + 2].replace(/COSTOS DE OBRA\s*/i, '').trim();
+        if (!nombreObra) nombreObra = campos[idxObra + 2].trim();
+    }
+    
+    return {
+        proyecto: proyecto ? proyecto.trim() : 'N/A',
+        obra: obra ? obra.trim() : 'N/A',
+        nombreObra: nombreObra || 'N/A'
+    };
+}
+
+// ============================================
+// NUEVO: Actualizar el título dinámicamente
+// ============================================
+function actualizarTituloProyecto(meta) {
+    const spanInfo = document.getElementById('infoProyecto');
+    if (!spanInfo || !meta) return;
+    
+    spanInfo.innerHTML = `
+        <i class="bi bi-building"></i> 
+        Proyecto <strong>${meta.proyecto}</strong> - 
+        Obra <strong>${meta.obra}</strong> (${meta.nombreObra})
+    `;
+    
+    // También actualizar el título de la página
+    document.title = `Analizador Contable - Proyecto ${meta.proyecto} - Obra ${meta.obra}`;
+    
+    console.log(`[META] Proyecto: ${meta.proyecto}, Obra: ${meta.obra}, Nombre: ${meta.nombreObra}`);
+}
+
+// ============================================
 // PARSER: OBRA.TXT
 // ============================================
 function parsearObra(texto) {
@@ -37,29 +90,23 @@ function parsearObra(texto) {
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
         
-        // Buscar "Monto Total\t" para encontrar el inicio del contenido variable
         const idxMontoTotal = linea.indexOf('Monto Total\t');
         if (idxMontoTotal < 0) continue;
         
-        // Extraer el contenido después de "Monto Total\t"
         const contenidoCompleto = linea.substring(idxMontoTotal + 'Monto Total\t'.length);
         
-        // Buscar "COSTOS DE OBRA" para encontrar el final del contenido variable
         const idxFin = contenidoCompleto.indexOf('\tCOSTOS DE OBRA');
         const contenidoVariable = idxFin >= 0 ? 
             contenidoCompleto.substring(0, idxFin) : 
             contenidoCompleto;
         
-        // Dividir por tabs
         const campos = contenidoVariable.split('\t').map(c => c.trim());
         
         if (campos.length < 6) continue;
         
         const primerCampo = campos[0];
         
-        // Detectar si es movimiento o categoría
         if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ"ÓN'].includes(primerCampo)) {
-            // MOVIMIENTO: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNITARIO
             const tipo = primerCampo;
             const codigo = campos[1];
             const fecha = campos[2];
@@ -75,7 +122,6 @@ function parsearObra(texto) {
                 });
             }
         } else if (/^\d+$/.test(primerCampo)) {
-            // CATEGORÍA: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
             const codigo = primerCampo;
             const nombre = campos[1];
             const cantidad = parsearMonto(campos[2]);
@@ -112,29 +158,23 @@ function parsearProceso(texto) {
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
         
-        // Buscar "Saldo\t" para encontrar el inicio del contenido variable
         const idxSaldo = linea.indexOf('Saldo\t');
         if (idxSaldo < 0) continue;
         
-        // Extraer el contenido después de "Saldo\t"
         const contenidoCompleto = linea.substring(idxSaldo + 'Saldo\t'.length);
         
-        // Buscar "Total Saldo Anterior" para encontrar el final del contenido variable
         const idxFin = contenidoCompleto.indexOf('\tTotal Saldo Anterior');
         const contenidoVariable = idxFin >= 0 ? 
             contenidoCompleto.substring(0, idxFin) : 
             contenidoCompleto;
         
-        // Dividir por tabs
         const campos = contenidoVariable.split('\t').map(c => c.trim());
         
         if (campos.length < 5) continue;
         
         const primerCampo = campos[0];
         
-        // Línea de totales de la cuenta
         if (primerCampo === '06-02-01-04-01') {
-            // CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
             totalDebitos = parsearMonto(campos[2]);
             totalCreditos = parsearMonto(campos[3]);
             saldoFinal = parsearMonto(campos[4]);
@@ -142,7 +182,6 @@ function parsearProceso(texto) {
             continue;
         }
         
-        // Asiento: FECHA | NUMERO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
         if (/^\d{2}-\d{2}-\d{4}$/.test(primerCampo)) {
             const fecha = primerCampo;
             const numero = campos[1];
@@ -171,7 +210,6 @@ function compararArchivos(obra, proceso) {
     console.log('[COMPARACIÓN] Iniciando...');
     const reqMap = new Map();
     
-    // Extraer de obra
     for (const cat of obra.categorias) {
         for (const mov of cat.movimientos) {
             const key = mov.codigo;
@@ -191,7 +229,6 @@ function compararArchivos(obra, proceso) {
 
     console.log(`[COMPARACIÓN] Requisiciones en obra: ${reqMap.size}`);
 
-    // Extraer de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/i);
         if (match) {
@@ -264,7 +301,7 @@ function renderizarResultados(resultado) {
     divResultados.classList.add('animacion-carga');
 
     document.getElementById('totalObra').textContent = '₡' + formatearMonto(resultado.totalObra);
-    document.getElementById('totalProceso').textContent = '₡' + formatearMonto(resultado.totalProceso);
+    document.getElementById('totalProceso').textContent = '' + formatearMonto(resultado.totalProceso);
     document.getElementById('totalDiferencia').textContent = '' + formatearMonto(resultado.totalDiferencia);
     document.getElementById('totalCuadradas').textContent = 
         `${resultado.coincidencias.length} / ${resultado.requisiciones.length}`;
@@ -278,7 +315,7 @@ function renderizarResultados(resultado) {
             <h6><i class="bi bi-info-circle"></i> Resumen del Análisis</h6>
             <p class="mb-1">• <strong>Total OBRA:</strong> ₡${formatearMonto(resultado.totalObra)}</p>
             <p class="mb-1">• <strong>Total PROCESO:</strong> ₡${formatearMonto(resultado.totalProceso)}</p>
-            <p class="mb-1">• <strong>Diferencia:</strong> ₡${formatearMonto(resultado.totalDiferencia)}</p>
+            <p class="mb-1">• <strong>Diferencia:</strong> ${formatearMonto(resultado.totalDiferencia)}</p>
             <p class="mb-0">• <strong>Asientos especiales:</strong> ${resultado.asientosEspeciales.length}</p>
         </div>
         ${resultado.asientosEspeciales.length > 0 ? `
@@ -292,7 +329,7 @@ function renderizarResultados(resultado) {
                             <td>${a.fecha}</td>
                             <td>${a.descripcion}</td>
                             <td class="monto-positivo">${a.debitos ? '₡'+formatearMonto(a.debitos) : '-'}</td>
-                            <td class="monto-negativo">${a.creditos ? '₡'+formatearMonto(a.creditos) : '-'}</td>
+                            <td class="monto-negativo">${a.creditos ? ''+formatearMonto(a.creditos) : '-'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -442,6 +479,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log(`Textos leídos: Obra=${textoObra.length} chars, Proceso=${textoProceso.length} chars`);
 
+            // NUEVO: Extraer y mostrar metadatos del proyecto
+            metadatosObra = extraerMetadatos(textoObra);
+            if (metadatosObra) {
+                actualizarTituloProyecto(metadatosObra);
+            }
+
             datosObra = parsearObra(textoObra);
             datosProceso = parsearProceso(textoProceso);
 
@@ -467,6 +510,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('resultados').style.display = 'none';
             btnAnalizar.disabled = true;
             datosObra = datosProceso = resultadoAnalisis = null;
+            metadatosObra = null;
+            
+            // Resetear el título
+            const spanInfo = document.getElementById('infoProyecto');
+            if (spanInfo) {
+                spanInfo.innerHTML = 'Sin archivos cargados';
+            }
+            document.title = 'Analizador Contable';
         });
     }
 
