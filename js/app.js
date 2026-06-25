@@ -35,7 +35,6 @@ function parsearObra(texto) {
         const campos = linea.split('\t').map(c => c.trim());
         if (campos.length < 10) continue;
 
-        // Detectar si es línea de categoría
         const esCategoria = campos.some((c, i) => 
             /^\d+$/.test(c) && campos[i+1] && !/^\d/.test(campos[i+1]) && 
             !['HRS','UND'].includes(campos[i+1])
@@ -56,7 +55,6 @@ function parsearObra(texto) {
                 categorias.push(categoriaActual);
             }
         } else if (categoriaActual) {
-            // Línea de movimiento
             const idxMov = campos.findIndex(c => 
                 ['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN'].includes(c)
             );
@@ -123,7 +121,6 @@ function parsearProceso(texto) {
 function compararArchivos(obra, proceso) {
     const reqObra = new Map();
     
-    // Extraer requisiciones de obra
     for (const cat of obra.categorias) {
         for (const mov of cat.movimientos) {
             const key = mov.codigo;
@@ -141,7 +138,6 @@ function compararArchivos(obra, proceso) {
         }
     }
 
-    // Extraer requisiciones de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/);
         if (match) {
@@ -164,7 +160,6 @@ function compararArchivos(obra, proceso) {
         }
     }
 
-    // Clasificar resultados
     const coincidencias = [];
     const diferencias = [];
     let totalDiferencia = 0;
@@ -179,7 +174,6 @@ function compararArchivos(obra, proceso) {
         }
     }
 
-    // Asientos especiales
     const asientosEspeciales = proceso.asientos.filter(a => 
         !a.descripcion.includes('REQUISICION') && 
         !a.descripcion.includes('DEVOLUCION')
@@ -213,7 +207,6 @@ function renderizarResultados(resultado) {
     cardDiff.className = 'card shadow-sm h-100 ' + 
         (Math.abs(resultado.totalDiferencia) < 1 ? 'text-bg-success' : 'text-bg-warning');
 
-    // Resumen
     document.getElementById('contenidoResumen').innerHTML = `
         <div class="alerta-info mb-3">
             <h6><i class="bi bi-info-circle"></i> Resumen del Análisis</h6>
@@ -242,7 +235,6 @@ function renderizarResultados(resultado) {
         </div>` : ''}
     `;
 
-    // Coincidencias
     document.getElementById('contenidoCuadradas').innerHTML = `
         <div class="alert alert-success">
             <i class="bi bi-check-circle"></i> 
@@ -270,7 +262,6 @@ function renderizarResultados(resultado) {
         </div>
     `;
 
-    // Diferencias
     document.getElementById('contenidoDiferencias').innerHTML = resultado.diferencias.length === 0 ?
         `<div class="alert alert-success"><i class="bi bi-check-circle"></i> ¡No hay diferencias!</div>` :
         `<div class="alerta-danger mb-3">
@@ -311,63 +302,109 @@ function exportarCSV() {
         const estado = r.diferencia < 0.02 ? 'OK' : 'DIFERENCIA';
         csv += `${r.codigo},"${r.tipo}","${r.fecha}","${r.categoria}",${r.montoObra.toFixed(2)},${r.montoProceso.toFixed(2)},${r.diferencia.toFixed(2)},${estado}\n`;
     }
-    descargar(csv, 'analisis_contable.csv', 'text/csv');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'analisis_contable.csv';
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 function exportarJSON() {
     if (!resultadoAnalisis) return;
-    descargar(JSON.stringify(resultadoAnalisis, null, 2), 'analisis_contable.json', 'application/json');
-}
-
-function descargar(contenido, nombre, tipo) {
-    const blob = new Blob([contenido], { type: tipo });
+    const blob = new Blob([JSON.stringify(resultadoAnalisis, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = nombre;
+    a.download = 'analisis_contable.json';
     a.click();
     URL.revokeObjectURL(url);
 }
 
 // ============================================
-// EVENTOS
+// INICIALIZACIÓN - EVENTOS
 // ============================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado correctamente');
+    
     const fileObra = document.getElementById('fileObra');
     const fileProceso = document.getElementById('fileProceso');
     const btnAnalizar = document.getElementById('btnAnalizar');
+    const btnLimpiar = document.getElementById('btnLimpiar');
+    const btnExportarCSV = document.getElementById('btnExportarCSV');
+    const btnExportarJSON = document.getElementById('btnExportarJSON');
 
-    const validarArchivos = () => {
-        btnAnalizar.disabled = !(fileObra.files.length && fileProceso.files.length);
-    };
+    if (!fileObra || !fileProceso || !btnAnalizar) {
+        console.error('No se encontraron los elementos del DOM');
+        return;
+    }
 
+    // Validar archivos cargados
+    function validarArchivos() {
+        const archivosListos = fileObra.files.length > 0 && fileProceso.files.length > 0;
+        btnAnalizar.disabled = !archivosListos;
+        console.log('Archivos listos:', archivosListos, '- Obra:', fileObra.files.length, '- Proceso:', fileProceso.files.length);
+    }
+
+    // Event listeners para carga de archivos
     fileObra.addEventListener('change', validarArchivos);
     fileProceso.addEventListener('change', validarArchivos);
 
-    btnAnalizar.addEventListener('click', async () => {
+    // Botón Analizar
+    btnAnalizar.addEventListener('click', async function() {
+        console.log('Iniciando análisis...');
         try {
             const textoObra = await fileObra.files[0].text();
             const textoProceso = await fileProceso.files[0].text();
 
+            console.log('Archivos leídos correctamente');
+            console.log('Texto obra length:', textoObra.length);
+            console.log('Texto proceso length:', textoProceso.length);
+
             datosObra = parsearObra(textoObra);
             datosProceso = parsearProceso(textoProceso);
+            
+            console.log('Parseo completado');
+            console.log('Categorías obra:', datosObra.categorias.length);
+            console.log('Asientos proceso:', datosProceso.asientos.length);
+
             resultadoAnalisis = compararArchivos(datosObra, datosProceso);
+            
+            console.log('Comparación completada');
+            console.log('Requisiciones:', resultadoAnalisis.requisiciones.length);
+            console.log('Coincidencias:', resultadoAnalisis.coincidencias.length);
+            console.log('Diferencias:', resultadoAnalisis.diferencias.length);
 
             renderizarResultados(resultadoAnalisis);
+            console.log('Resultados renderizados');
         } catch (error) {
+            console.error('Error al procesar:', error);
             alert('Error al procesar los archivos: ' + error.message);
-            console.error(error);
         }
     });
 
-    document.getElementById('btnLimpiar').addEventListener('click', () => {
-        fileObra.value = '';
-        fileProceso.value = '';
-        document.getElementById('resultados').style.display = 'none';
-        btnAnalizar.disabled = true;
-        datosObra = datosProceso = resultadoAnalisis = null;
-    });
+    // Botón Limpiar
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', function() {
+            console.log('Limpiando...');
+            fileObra.value = '';
+            fileProceso.value = '';
+            document.getElementById('resultados').style.display = 'none';
+            btnAnalizar.disabled = true;
+            datosObra = null;
+            datosProceso = null;
+            resultadoAnalisis = null;
+        });
+    }
 
-    document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
-    document.getElementById('btnExportarJSON').addEventListener('click', exportarJSON);
+    // Botones de exportación
+    if (btnExportarCSV) {
+        btnExportarCSV.addEventListener('click', exportarCSV);
+    }
+    if (btnExportarJSON) {
+        btnExportarJSON.addEventListener('click', exportarJSON);
+    }
+
+    console.log('Event listeners configurados correctamente');
 });
