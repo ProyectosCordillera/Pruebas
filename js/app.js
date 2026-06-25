@@ -24,7 +24,7 @@ const parsearMonto = (str) => {
 };
 
 // ============================================
-// PARSER: OBRA.TXT
+// PARSER: OBRA.TXT (CORREGIDO)
 // ============================================
 function parsearObra(texto) {
     const lineas = texto.split('\n').filter(l => l.trim());
@@ -33,42 +33,50 @@ function parsearObra(texto) {
 
     for (const linea of lineas) {
         const campos = linea.split('\t').map(c => c.trim());
-        if (campos.length < 10) continue;
-
-        const esCategoria = campos.some((c, i) => 
-            /^\d+$/.test(c) && campos[i+1] && !/^\d/.test(campos[i+1]) && 
-            !['HRS','UND'].includes(campos[i+1])
+        
+        // Buscar el tipo de registro (SALIDA, SALIDA M.O., DEVOLUCIÓN, o categoría)
+        const idxTipo = campos.findIndex(c => 
+            c === 'SALIDA' || c === 'SALIDA M.O.' || c === 'DEVOLUCIÓN' || c === 'DEVOLUCIÃ"ÓN'
         );
 
-        if (esCategoria) {
-            const idxCodigo = campos.findIndex(c => /^\d+$/.test(c));
-            if (idxCodigo > 0) {
-                categoriaActual = {
-                    codigo: campos[idxCodigo],
-                    nombre: campos[idxCodigo + 1],
-                    cantidad: parsearMonto(campos[idxCodigo + 2]),
-                    unidad: campos[idxCodigo + 3],
-                    montoUnitario: parsearMonto(campos[idxCodigo + 4]),
-                    montoTotal: parsearMonto(campos[idxCodigo + 5]),
-                    movimientos: []
-                };
-                categorias.push(categoriaActual);
-            }
-        } else if (categoriaActual) {
-            const idxMov = campos.findIndex(c => 
-                ['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN'].includes(c)
-            );
-            if (idxMov > 0) {
-                const tipo = campos[idxMov];
-                const codigo = campos[idxMov + 1];
-                const fecha = campos[idxMov + 2];
-                const cantidad = parsearMonto(campos[idxMov + 3]);
-                const unidad = campos[idxMov + 4];
-                const montoTotal = parsearMonto(campos[idxMov + 6]);
+        if (idxTipo > 0) {
+            // Es una línea de movimiento
+            const tipo = campos[idxTipo];
+            const codigo = campos[idxTipo + 1];
+            const fecha = campos[idxTipo + 2];
+            const cantidad = parsearMonto(campos[idxTipo + 3]);
+            const unidad = campos[idxTipo + 4];
+            const montoTotal = parsearMonto(campos[idxTipo + 5]);
 
+            if (categoriaActual) {
                 categoriaActual.movimientos.push({
                     tipo, codigo, fecha, cantidad, unidad, montoTotal
                 });
+            }
+        } else {
+            // Es una línea de categoría - buscar el código numérico después de "Monto Total"
+            const idxMontoTotal = campos.findIndex(c => c === 'Monto Total');
+            if (idxMontoTotal > 0) {
+                const codigo = campos[idxMontoTotal + 1];
+                const nombre = campos[idxMontoTotal + 2];
+                const cantidad = parsearMonto(campos[idxMontoTotal + 3]);
+                const unidad = campos[idxMontoTotal + 4];
+                const montoUnitario = parsearMonto(campos[idxMontoTotal + 5]);
+                const montoTotal = parsearMonto(campos[idxMontoTotal + 6]);
+
+                // Solo crear categoría si el código es numérico y no es un header
+                if (/^\d+$/.test(codigo) && !['Movimiento', 'Código', 'Fecha'].includes(codigo)) {
+                    categoriaActual = {
+                        codigo,
+                        nombre,
+                        cantidad,
+                        unidad,
+                        montoUnitario,
+                        montoTotal,
+                        movimientos: []
+                    };
+                    categorias.push(categoriaActual);
+                }
             }
         }
     }
@@ -78,7 +86,7 @@ function parsearObra(texto) {
 }
 
 // ============================================
-// PARSER: PROCESO.TXT
+// PARSER: PROCESO.TXT (CORREGIDO)
 // ============================================
 function parsearProceso(texto) {
     const lineas = texto.split('\n').filter(l => l.trim());
@@ -87,29 +95,35 @@ function parsearProceso(texto) {
 
     for (const linea of lineas) {
         const campos = linea.split('\t').map(c => c.trim());
-        if (campos.length < 5) continue;
+        
+        // Buscar la fecha (formato DD-MM-YYYY)
+        const idxFecha = campos.findIndex(c => /^\d{2}-\d{2}-\d{4}$/.test(c));
+        
+        if (idxFecha > 0) {
+            const fecha = campos[idxFecha];
+            const numero = campos[idxFecha + 1];
+            const descripcion = campos[idxFecha + 2];
+            
+            // Buscar Débitos, Créditos y Saldo después de la descripción
+            // La estructura es: ...descripcion [vacío] debitos creditos saldo...
+            const debitos = parsearMonto(campos[idxFecha + 4]);
+            const creditos = parsearMonto(campos[idxFecha + 5]);
+            const saldo = parsearMonto(campos[idxFecha + 6]);
 
-        if (campos[0] === 'Cuenta Contable') continue;
-        if (campos[0].startsWith('Total')) continue;
-
-        if (campos[0] === '06-02-01-04-01') {
+            asientos.push({
+                fecha,
+                numero,
+                descripcion,
+                debitos,
+                creditos,
+                saldo
+            });
+        } else if (campos[0] === '06-02-01-04-01') {
+            // Línea de totales de la cuenta
             totalDebitos = parsearMonto(campos[2]);
             totalCreditos = parsearMonto(campos[3]);
             saldoFinal = parsearMonto(campos[4]);
-            continue;
         }
-
-        const fecha = campos[0];
-        if (!/^\d{2}-\d{2}-\d{4}$/.test(fecha)) continue;
-
-        asientos.push({
-            fecha,
-            numero: campos[1],
-            descripcion: campos[2],
-            debitos: parsearMonto(campos[3]),
-            creditos: parsearMonto(campos[4]),
-            saldo: parsearMonto(campos[5])
-        });
     }
 
     return { asientos, totalDebitos, totalCreditos, saldoFinal };
@@ -121,6 +135,7 @@ function parsearProceso(texto) {
 function compararArchivos(obra, proceso) {
     const reqObra = new Map();
     
+    // Extraer requisiciones de obra
     for (const cat of obra.categorias) {
         for (const mov of cat.movimientos) {
             const key = mov.codigo;
@@ -138,6 +153,7 @@ function compararArchivos(obra, proceso) {
         }
     }
 
+    // Extraer requisiciones de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/);
         if (match) {
@@ -160,6 +176,7 @@ function compararArchivos(obra, proceso) {
         }
     }
 
+    // Clasificar resultados
     const coincidencias = [];
     const diferencias = [];
     let totalDiferencia = 0;
@@ -174,6 +191,7 @@ function compararArchivos(obra, proceso) {
         }
     }
 
+    // Asientos especiales
     const asientosEspeciales = proceso.asientos.filter(a => 
         !a.descripcion.includes('REQUISICION') && 
         !a.descripcion.includes('DEVOLUCION')
@@ -207,12 +225,13 @@ function renderizarResultados(resultado) {
     cardDiff.className = 'card shadow-sm h-100 ' + 
         (Math.abs(resultado.totalDiferencia) < 1 ? 'text-bg-success' : 'text-bg-warning');
 
+    // Resumen
     document.getElementById('contenidoResumen').innerHTML = `
         <div class="alerta-info mb-3">
             <h6><i class="bi bi-info-circle"></i> Resumen del Análisis</h6>
             <p class="mb-1">• <strong>Total reportado en OBRA:</strong> ₡${formatearMonto(resultado.totalObra)}</p>
             <p class="mb-1">• <strong>Saldo final en PROCESO:</strong> ₡${formatearMonto(resultado.totalProceso)}</p>
-            <p class="mb-1">• <strong>Diferencia global:</strong> ₡${formatearMonto(resultado.totalDiferencia)}</p>
+            <p class="mb-1">• <strong>Diferencia global:</strong> ${formatearMonto(resultado.totalDiferencia)}</p>
             <p class="mb-0">• <strong>Asientos especiales (planillas, CCSS, intereses):</strong> 
                 ${resultado.asientosEspeciales.length}</p>
         </div>
@@ -235,6 +254,7 @@ function renderizarResultados(resultado) {
         </div>` : ''}
     `;
 
+    // Coincidencias
     document.getElementById('contenidoCuadradas').innerHTML = `
         <div class="alert alert-success">
             <i class="bi bi-check-circle"></i> 
@@ -262,6 +282,7 @@ function renderizarResultados(resultado) {
         </div>
     `;
 
+    // Diferencias
     document.getElementById('contenidoDiferencias').innerHTML = resultado.diferencias.length === 0 ?
         `<div class="alert alert-success"><i class="bi bi-check-circle"></i> ¡No hay diferencias!</div>` :
         `<div class="alerta-danger mb-3">
@@ -284,7 +305,7 @@ function renderizarResultados(resultado) {
                             <td>${r.categoria}</td>
                             <td class="text-end">₡${formatearMonto(r.montoObra)}</td>
                             <td class="text-end">₡${formatearMonto(r.montoProceso)}</td>
-                            <td class="text-end monto-negativo">₡${formatearMonto(r.diferencia)}</td>
+                            <td class="text-end monto-negativo">${formatearMonto(r.diferencia)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
