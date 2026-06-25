@@ -3,549 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recibo de Reserva - Condominio Sundara</title>
-    
-    <!-- 🔥 Meta tags para evitar caché -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
-    <!-- ✅ html2pdf.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    
-    <!-- CSS Personalizado -->
-    <link rel="stylesheet" href="css/styles.css">
-
-    <style>
-    /* Forzar eliminación de TODOS los recuadros */
-    input, select, textarea {
-        border: none !important;
-        border-bottom: 1px solid #000 !important;
-        background: transparent !important;
-        background-color: transparent !important;
-        -webkit-appearance: none !important;
-        -moz-appearance: none !important;
-        appearance: none !important;
-        box-shadow: none !important;
-        outline: none !important;
-        border-radius: 0 !important;
-        padding: 2px 4px !important;
-    }
-    
-    /* Específico para date inputs */
-    input[type="date"] {
-        border: none !important;
-        border-bottom: 1px solid #000 !important;
-        background: transparent !important;
-        -webkit-appearance: none !important;
-    }
-    
-    input[type="date"]::-webkit-calendar-picker-indicator {
-        opacity: 0;
-        position: absolute;
-        right: 0;
-        top: 0;
-        height: 100%;
-        width: 20px;
-    }
-    
-    /* Para selects */
-    select {
-        border: none !important;
-        border-bottom: 1px solid #000 !important;
-        background: transparent !important;
-        background-image: none !important;
-        -webkit-appearance: none !important;
-    }
-    
-    /* IMPRESIÓN */
-    @media print {
-        * {
-            background: transparent !important;
-            background-color: transparent !important;
-            box-shadow: none !important;
-        }
-        
-        input, select, textarea {
-            border: none !important;
-            border-bottom: 1px solid #000 !important;
-            background: transparent !important;
-        }
-        
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            display: none !important;
-        }
-    }
-</style>
-
+    <title>Analizador Contable - Obra vs Proceso</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
 </head>
 <body>
- <!-- Navbar con acciones claras -->
-<nav class="navbar navbar-expand-lg no-print sticky-top shadow-sm bg-dark" style="z-index:1050;">
-    <div class="container-fluid">
-        <!-- Logo -->
-        <a class="navbar-brand d-flex align-items-center text-white" href="#">
-            <img src="img/Logo-Sundara.jpg" alt="Logo Sundara" style="height:40px;" class="me-2">
-            <span class="fw-bold"></span>
-        </a>
-        
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSundara">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarSundara">    
-            <!-- Botones de acción principales -->
-            <div class="d-flex flex-wrap gap-2 mx-auto justify-content-center my-2 my-lg-0">
-                
-                <!-- GRUPO: Archivo -->
-                <button class="btn btn-success btn-action" onclick="guardarRecibo()" title="Guardar en base de datos">
-                    <i class="bi bi-save-fill fs-5"></i>
-                    <span class="d-none d-md-inline ms-1">Guardar</span>
-                </button>
-                
-                <button class="btn btn-primary btn-action" onclick="window.print()" title="Imprimir recibo">
-                    <i class="bi bi-printer-fill fs-5"></i>
-                    <span class="d-none d-md-inline ms-1">Imprimir</span>
-                </button>
-                
-                <button class="btn btn-info btn-action text-white" onclick="saveAsPDF(event)" title="Descargar como PDF">
-                    <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
-                    <span class="d-none d-md-inline ms-1">PDF</span>
-                </button>
-                
-                <button class="btn btn-warning btn-action" onclick="resetForm()" title="Limpiar formulario">
-                    <i class="bi bi-eraser-fill fs-5"></i>
-                    <span class="d-none d-md-inline ms-1">Limpiar</span>
-                </button>
-                
-                <!-- Separador visual -->
-                <div class="vr bg-light mx-1 d-none d-md-block"></div>
-                
-                <!-- GRUPO: Consultas -->
-                <button class="btn btn-outline-light btn-action" onclick="abrirConsulta()" title="Ver todos los recibos">
-                    <i class="bi bi-search fs-5"></i>
-                    <span class="d-none d-md-inline ms-1">Consultar</span>
-                </button>
-                
-                <button class="btn btn-outline-success btn-action" onclick="nuevoRecibo()" title="Crear recibo nuevo">
-                    <i class="bi bi-plus-circle-fill fs-5"></i>
-                    <span class="d-none d-md-inline ms-1">Nuevo</span>
-                </button>
-            </div>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Analizador Contable
+            </span>
+            <span class="text-light small">Proyecto 40 - Obra Altamira</span>
         </div>
-    </div>
-</nav>
+    </nav>
 
-<!-- Estilo para los botones -->
-<style>
-    .btn-action {
-        padding: 8px 16px;
-        font-weight: 500;
-        border-radius: 8px;
-        transition: all 0.2s;
-    }
-    .btn-action:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .btn-action i {
-        vertical-align: middle;
-    }
-    
-    /* ✅ NUEVO: Estilo para modo visualización */
-    .modo-visualizacion input,
-    .modo-visualizacion select,
-    .modo-visualizacion textarea {
-        background-color: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #495057 !important;
-    }
-    
-    .modo-visualizacion .navbar {
-        background-color: #6c757d !important; /* Gris para indicar modo lectura */
-    }
-</style>
-
-    <!-- Modal: Consultar Recibos -->
-<div class="modal fade" id="modalConsulta" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-folder2-open"></i> Recibos Guardados
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <div class="container my-4">
+        <!-- Sección de carga -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-cloud-upload"></i> Cargar Archivos TXT</h5>
             </div>
-            <div class="modal-body">
-                <!-- Buscador -->
-                <div class="input-group mb-3">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" id="buscarRecibo" class="form-control" 
-                           placeholder="Buscar por nombre, cédula o número de casa..."
-                           onkeyup="filtrarRecibos()">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">📄 Archivo OBRA.txt</label>
+                        <input type="file" class="form-control" id="fileObra" accept=".txt">
+                        <small class="text-muted">Reporte de ejecución presupuestaria</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">📄 Archivo PROCESO.txt</label>
+                        <input type="file" class="form-control" id="fileProceso" accept=".txt">
+                        <small class="text-muted">Libro mayor - Producto en Proceso</small>
+                    </div>
                 </div>
-                
-                <!-- Tabla de recibos -->
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped align-middle">
-                       <thead class="table-dark">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Cliente</th>
-                                    <th>Cédula</th>
-                                    <th>Casa</th>
-                                    <th>Monto</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                        <tbody id="tablaRecibos">
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">
-                                    <i class="bi bi-hourglass-split"></i> Cargando...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <span class="me-auto text-muted" id="totalRecibos">0 recibos</span>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Confirmar eliminación -->
-<div class="modal fade" id="modalConfirmar" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar eliminación
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p class="fs-5">¿Está seguro de eliminar el recibo <strong id="reciboEliminarInfo"></strong>?</p>
-                <p class="text-danger mb-0"><small>Esta acción no se puede deshacer.</small></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">
-                    <i class="bi bi-trash-fill"></i> Sí, eliminar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-    <!-- Contenido principal -->
-    <div id="Hoja1" class="container py-3">
-      <div class="pdf-margin">
-        <div id="PAgina1">
-            <div id="Encabezado">
-                <!-- Logo centrado -->
-                <div class="logo-container d-flex justify-content-start">
-                    <img src="img/Logo-Sundara.jpg" class="img-fluid" alt="Logo Sundara" style="max-height:70px;">
-                </div>
-                <br />
-                
-                <!-- Primera fila -->
-                <div class="d-flex justify-content-center align-items-center mb-2 text-center gap-2">
-                    <h2 class="h5 mb-0 Encabe">RECIBO DE RESERVA</h2>
-                </div>
-                
-                <div class="d-flex justify-content-center align-items-center gap-2 text-center">
-                    <h3 class="h7 mb-0 Encabe2">CASA NÚMERO</h3>
-                    <select id="ddlcasaNumero" class="form-select w-auto dropdown-custom-Casa">
-                        <option value="">...</option>
-                    </select>
-                </div>
-                <br />
-                
-                <div id="CuerpoHoja1" class="Cuerp1">
-                    Hemos recibido de <input type="text" id="txtNombre" class="underlineNombre">,
-                    estado civil <select id="ddlEstado" class="dropdown-custom-Estado">
-                        <option value="">Soltero(a)</option>
-                        <option>Casado(a)</option>
-                        <option>Divorciado(a)</option>
-                        <option>Viudo(a)</option>
-                    </select>,
-                    de oficio
-                    <input type="text" id="txtOficio" class="underlineOficio">,
-                    vecino de
-                   <input type="text" id="txtDireccion" class="underlineDireccion connected-input" 
-                           onkeyup="moveToNext(this, event)" maxlength="50" >,
-                    <input type="text" id="txtDireccion2" class="underlineDireccion2 connected-input" 
-                           onkeyup="moveToPrevious(this, event)" maxlength="50" >
-                  
-                    nacionalidad
-                    <input type="text" id="txtNacionalidad2" class="underlineNacionalidad">,
-                    <select id="ddlTipoId" class="dropdown-custom-Estado">
-                        <option value="">Cédula</option>                      
-                        <option>Pasaporte</option>
-                        <option>Otros</option>
-                    </select>,
-                    número
-                    <input type="text" id="txtCedula" class="underlineId">,
-                    teléfono celular
-                    <input type="tel" id="txtCelular" class="underlinetel1">,
-                    teléfono #2
-                    <input type="tel" id="txtTelefono2" class="underlinetel2">,
-                    correo electrónico #1
-                    <input type="email" id="txtEmail1" class="underlineCorreo1">,
-                    correo electrónico #2
-                    <input type="email" id="txtEmail2" class="underlineCorreo2">,
-                    en adelante denominado el "CLIENTE", la suma de
-                    <input type="text" id="txtMonto" class="underlineMontoLetras">,
-                    dólares EEUU (USD$ <input type="text" id="txtMontoUSD" class="underline" style="width:100px">).
-                    Este pago lo realiza el CLIENTE como reserva y a cuenta del precio de la casa finca filial
-                    <input type="text" id="txtNumeroCasa" class="underlineNumCasa" readonly>,
-                    con un lote de <input type="text" id="txtlote" class="underline-lote" readonly>
-                    y una casa tipo
-                    <select id="ddltipocasa" class="dropdown-Tipo-casa">
-                        <option value="">Tipo 1</option>
-                        <option value="2">Tipo 2</option>
-                        <option value="3A">Tipo 3-A</option>
-                        <option value="3B">Tipo 3-B</option>
-                    </select>
-                    del
-                    condominio Sundara, ubicado en San Joaquín de Flores de la Firestone 200 mts norte.
-                    <br /> 
-                    <b>El Proyecto tiene los siguientes tipos de casas:</b>
-                    <br />
-                    <b>Tipo 1)</b>:  De un nivel con 100.00 m2 de construcción, con un área de catastro de lote desde 112,00 m2.
-                    Consta de sala-comedor-cocina, lavandería, estacionamiento para dos vehículos y patio, habitación principal con su baño completo y walk-in closet, habitación secundaria y segundo baño completo.
-                    <br />
-                    <b>Tipo 2)</b>:  De dos niveles con 160.00 m2 de construcción, con un área de catastro de lote desde 110,00 m2.
-                    En primer piso consta de sala-comedor-cocina, medio baño de visitas, escalera, lavandería, estacionamiento para dos vehículos, bodega y patio; en el segundo piso consta de habitación principal con su baño completo y walk-in closet, segunda habitación, tercera habitación, área para televisión, segundo baño completo y escaleras.
-                    <br />
-                    <b> Tipo 3-A)</b> De dos niveles con 136.00 m2 de construcción, con un área de catastro de lote desde
-                    110,00 m2. En primer piso consta de sala-comedor-cocina, medio baño de visitas,
-                    escalera, lavandería, estacionamiento para dos vehículos, bodega y patio;
-                    en el segundo piso consta de habitación principal con su baño completo y walk-in closet,
-                    segunda habitación, área para televisión, segundo baño completo y escaleras.<br />
-                    <b>Tipo 3-B)</b> De dos niveles con 136.00 m2 de construcción, con un área de catastro de lote desde
-                    110,00 m2. En primer piso consta de sala-comedor-cocina, medio baño de visitas,
-                    escalera, lavandería, estacionamiento para dos vehículos, bodega y patio;
-                    en el segundo piso consta de habitación principal con su baño completo y walk-in closet,
-                    segunda habitación, tercera habitación, segundo baño completo y escaleras.
+                <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-success" id="btnAnalizar" disabled>
+                        <i class="bi bi-gear"></i> Analizar Archivos
+                    </button>
+                    <button class="btn btn-outline-secondary" id="btnLimpiar">
+                        <i class="bi bi-arrow-clockwise"></i> Limpiar
+                    </button>
+                    <button class="btn btn-outline-primary" id="btnEjemplo">
+                        <i class="bi bi-lightbulb"></i> Cargar Ejemplo
+                    </button>
                 </div>
             </div>
         </div>
-        
-      
-        
-        <div id="pagina2" class="page-break">
-            <div class="page-indicator no-print text-end"></div>
-            <br />
-            <!-- PRIMERA: Precio y forma de pago -->
-            <u><b>PRIMERA</b></u>:
-            El precio de la casa es de <input type="text" class="underlineP">
-            00/100 dólares EEUU (USD$ <input type="text" id="TextBox0" class="underlineMontos">),
-            que serán pagados por EL CLIENTE de la siguiente manera:
-            <br />
-            
-            <table class="two-column-table">
-                <tr>
-                    <td class="left-column">- Un pago de Reserva el
-                        <input type="date" class="date-input" id="fechaReserva">
-                    </td>
-                    <td class="right-column">
-                        <div class="right-column-content">
-                            <span class="currency">USD$</span>
-                            <input type="text" id="txtmonto1" class="underlineMontos">
+
+        <!-- Resultados -->
+        <div id="resultados" style="display:none;">
+            <!-- Resumen general -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card text-bg-primary shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Total OBRA</h6>
+                            <h3 id="totalObra" class="mb-0">-</h3>
                         </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="left-column">- Un pago para firma de Contrato el día
-                        <input type="date" class="date-input" id="fechaContrato">
-                    </td>
-                    <td class="right-column">
-                        <div class="right-column-content">
-                            <span class="currency">USD$</span>
-                            <input type="text" id="TextBox2" class="underlineMontos">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-bg-info shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Total PROCESO</h6>
+                            <h3 id="totalProceso" class="mb-0">-</h3>
                         </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="left-column">- 22 cuotas mensuales consecutivas el
-                        <input type="number" id="txtnumcuota" class="underlineNumcuota" min="1" max="31"> de cada mes
-                    </td>
-                    <td class="right-column">
-                        <div class="right-column-content">
-                            <span class="currency">USD$</span>
-                            <input type="text" id="TextBox3" class="underlineMontos">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm h-100" id="cardDiferencia">
+                        <div class="card-body">
+                            <h6 class="card-title">Diferencia</h6>
+                            <h3 id="totalDiferencia" class="mb-0">-</h3>
                         </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="left-column">- 2 cuotas extraordinarias c/u en los meses 12, 24 de</td>
-                    <td class="right-column">
-                        <div class="right-column-content">
-                            <span class="currency">USD$</span>
-                            <input type="text" id="TextBox4" class="underlineMontos">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-bg-success shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Requisiciones Cuadradas</h6>
+                            <h3 id="totalCuadradas" class="mb-0">-</h3>
                         </div>
-                    </td>
-                </tr>
-            </table>
-            
-            <div class="custom-checkbox no-print">
-                <input type="checkbox" id="chbxAplicar" class="chbAplica">
-                <label for="chbxAplicar">Aplicar</label>
+                    </div>
+                </div>
             </div>
-            <br />
-            
-            <div id="pnlMensajeDescuento" class="mensaje-descuento" style="display:none;">
-                Reducción de precio: Sí y solo Sí, el cliente cumple con todas las fechas y montos establecidas en el
-                plan de pagos, se le reconocerá un descuento de USD
-                <input type="text" id="txtreduceprecio" class="underlineMontoLetras" style="width:100px">
-                al momento de la Formalización.
-            </div>
-            
-            La cancelación del saldo de formalización se hará a la firma de la escritura.
-            <br />
-            
-            <!-- SEGUNDA: -->
-            <u><b>SEGUNDA</b></u>:
-            Esta Reserva es intransferible y tiene una validez de 8 días naturales contados a partir de la fecha de su firma,
-            plazo dentro del cual EL CLIENTE deberá suscribir la Opción de Compra correspondiente.
-         
-            
-            <!-- TERCERA: -->
-            <br />
-            <u><b>TERCERA</b></u>:
-            Serán desistimientos unilaterales por parte del CLIENTE, los casos siguientes:
-            <ol>
-                <li class="list-item text-justify">
-                    EL CLIENTE, tendrá ocho días naturales para retirarse de la transacción sin ninguna penalidad, debiendo notificar por escrito al DESARROLLADOR en su oficina ubicada en Centro Corporativo Lindora, oficina 35, Pozos de Santa Ana. Por lo anterior se le devolverá el 100% del monto de esta Reserva. En el caso de que este pago se haya realizado por medio de tarjeta de crédito, se devolverá la reserva menos los costos por comisiones y otros gastos que cobre el Banco respectivo. De acuerdo a lo anterior, esta Reserva quedará anulada y el DESARROLLADOR quedará libre de toda responsabilidad y con el derecho de disponer libremente de la casa.
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabResumen">
+                        <i class="bi bi-bar-chart"></i> Resumen
+                    </button>
                 </li>
-                <li class="list-item text-justify">
-                    Después de transcurridos 8 días naturales desde la fecha de la firma de esta Reserva sin que se haya firmado Opción de Compra, EL CLIENTE notifica por escrito al DESARROLLADOR que desea retirarse del negocio, esta Reserva quedará anulada y el DESARROLLADOR quedará libre de toda responsabilidad y le dará derecho a tomar para sí el 50% del dinero recibido para gastos administrativos, comisiones de ventas y como penalidad, así como a disponer libremente de la casa.
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCuadradas">
+                        <i class="bi bi-check-circle"></i> Coincidencias
+                    </button>
                 </li>
-                <li class="list-item text-justify">
-                    Si transcurrido el plazo de 15 días naturales de validez de esta Reserva EL CLIENTE no se presenta a suscribir el contrato de Opción de Compra, esta Reserva quedará anulada y EL DESARROLLADOR tendrá derecho a tomar para sí el 100% del dinero recibido y a disponer libremente de la casa.
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDiferencias">
+                        <i class="bi bi-exclamation-triangle"></i> Diferencias
+                    </button>
                 </li>
-            </ol>
-        </div>
-        
-        <div id="pagina3" class="page-break">
-            <div class="page-indicator no-print text-end"></div>
-            
-            <!-- CUARTA:  -->
-            <u><b>CUARTA</b></u>:
-            Desistimiento unilateral por parte del DESARROLLADOR:
-            En caso de que Urbano Condominio S.A. desista de la presente Reserva procederá a notificar
-            mediante correo electrónico y deberá reintegrar a EL CLIENTE en un lapso de 8 días naturales, la cantidad
-            recibida más un monto equivalente al 100% del dinero recibido en esta Reserva como indemnización total por
-            daños y perjuicios a favor de EL CLIENTE; en este caso esta Reserva quedará anulada y EL DESARROLLADOR
-            tendrá derecho a disponer libremente de la casa.
-            En el caso de que el Fiduciario no acepte a EL CLIENTE para incorporarse al Fideicomiso de Primas,
-            se procederá a la devolución a EL CLIENTE del monto pagado por este último en un plazo de 30 días, menos los
-            gastos de comisión de tarjeta de credito si los hubiere, sin que el DESARROLLADOR deba pagar alguna indemnización a EL CLIENTE.
-            <br />
-            
-            <!-- QUINTA:  -->
-            <u><b>QUINTA:</b></u>
-            Para efectos de pagos, depósitos, reintegros o devoluciones ambas partes se autorizan mutuamente para que se efectúen en las cuentas siguientes:<br />
-            EL DESARROLLADOR: Banco Nacional <b><u>I Etapa: IBAN CR48015100010026234639</u></b>, Banco Nacional <b><u>II Etapa IBAN CR39015100010026234898</u></b>.<br />
-            EL CLIENTE: Banco <input type="text" id="txtBancoCliente" class="underline" style="width:150px">
-            N° de cuenta <input type="text" id="txtCuentaCliente" class="underlineCuentaCliente"><br />
-            <b>Para transferencias al exterior completar:</b><br />
-            Dueño de la cuenta: <input type="text" id="txtDueñoCuenta" class="underline" style="width:200px">
-            Cuenta N°: <input type="text" id="txtCuentaExterior" class="underline" style="width:150px"><br />
-            Nombre del banco: <input type="text" id="txtNombreBanco" class="underline" style="width:200px"><br />
-            ABA: <input type="text" id="txtABA" class="underline" style="width:100px">
-            SWIFT: <input type="text" id="txtSWIFT" class="underline" style="width:100px"><br />
-            Dirección del banco: <input type="text" id="txtDireccionBanco" class="underline-direcionbanco" style="width:300px">
-            <br />
-            
-            <!-- SEXTA:  -->
-            <u><b>SEXTA:</b></u>
-            Durante el transcurso de toda la operación de compraventa y también
-            posteriormente, ambas partes, tanto el DESARROLLADOR como el CLIENTE están
-            obligados al cumplimiento de todas las leyes y normas que dicta la Superintendencia
-            General de Entidades Financieras (SUGEF). Por disposición de la SUGEF se incluye
-            el párrafo siguiente: "Se advierte al público que Urbano Condominio Sociedad
-            Anónima es supervisada solamente en materia de prevención de legitimación
-            de capitales, financiamiento al terrorismo y financiamiento de la proliferación de armas
-            de destrucción masiva, y además se encuentra sujeta a disposiciones vinculantes de
-            la Unidad de Inteligencia Financiera del Instituto Costarricense sobre Drogas. Por lo
-            tanto, la SUGEF no supervisa en materia financiera a Urbano Condominio Sociedad
-            Anónima, ni los negocios que ofrece, ni su seguridad, estabilidad o solvencia."
-            Con la firma de este documento de reserva el cliente se obliga a entregar copia y/o los
-            documentos y/o formularios firmados requeridos a continuación:
-            
-            <!-- FECHA Y FIRMA  -->
-            <br />
-            De acuerdo con todo lo anterior, firmamos en San José el día
-           <!-- Día -->
-            <select id="ddldia" class="dropdown-custom-Dia">
-                <option value="">Día</option>
-                <!-- Se llena dinámicamente con JS -->
-            </select>
-            del mes de
-           <select id="ddlmes" class="dropdown-custom-Mes">
-                <option value="">Mes</option>
-                <!-- Se llena dinámicamente con JS -->
-            </select>
-            de
-           <select id="ddlano" class="dropdown-custom-Ano">
-                <option value="">Año</option>
-                <!-- Se llena dinámicamente con JS -->
-            </select>.
-           <br />
-              <br />
-            <br />
-              <br />
-            <div class="signature-section">
-                <!-- Firma izquierda -->
-                <div class="signature-area">
-                    <div class="signature-line"></div>
-                    <div class="signature-name">EL CLIENTE</div>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabObra">
+                        <i class="bi bi-file-text"></i> Obra (Detallado)
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabProceso">
+                        <i class="bi bi-file-text"></i> Proceso (Detallado)
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content border border-top-0 p-3 bg-white">
+                <div class="tab-pane fade show active" id="tabResumen">
+                    <div id="contenidoResumen"></div>
                 </div>
-                
-                <!-- Firma derecha -->
-                <div class="signature-area">
-                    <div class="signature-line"></div>
-                    <div class="signature-name">URBANO CONDOMINIO S.A.</div>
-                    <div class="signature-info">Cédula Jurídica 3-101-806533</div>
-                    <div class="signature-info">EL DESARROLLADOR</div>
+                <div class="tab-pane fade" id="tabCuadradas">
+                    <div id="contenidoCuadradas"></div>
                 </div>
+                <div class="tab-pane fade" id="tabDiferencias">
+                    <div id="contenidoDiferencias"></div>
+                </div>
+                <div class="tab-pane fade" id="tabObra">
+                    <div id="contenidoObra"></div>
+                </div>
+                <div class="tab-pane fade" id="tabProceso">
+                    <div id="contenidoProceso"></div>
+                </div>
+            </div>
+
+            <!-- Botones de exportación -->
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-outline-success" id="btnExportarCSV">
+                    <i class="bi bi-download"></i> Exportar CSV
+                </button>
+                <button class="btn btn-outline-danger" id="btnExportarJSON">
+                    <i class="bi bi-filetype-json"></i> Exportar JSON
+                </button>
             </div>
         </div>
     </div>
-</div>  
-   <footer class="no-print fixed-bottom bg-secondary text-white text-center py-2">
-    © 2026 Sundara — Todos los derechos reservados
-</footer>
 
+    <footer class="bg-dark text-light text-center py-3 mt-5">
+        <small>Analizador Contable v1.0 - Procesamiento 100% local en tu navegador</small>
+    </footer>
 
-    <!-- Scripts -->
-    
-<!-- Scripts -->
-
-<!-- 1. Bootstrap JS (PRIMERO - lo usan todos) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- 2. API (antes de menu-functions porque la usa) -->
-<script src="js/api-recibo.js"></script>
-
-<!-- 3. Funciones del formulario -->
-<script src="js/form-functions.js"></script>
-
-<!-- 4. Generador de PDF -->
-<script src="js/pdf-generator.js"></script>
-
-<!-- 5. Funciones del menú (AL FINAL - usa todo lo anterior) -->
-<script src="js/menu-functions.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
