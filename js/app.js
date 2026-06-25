@@ -179,13 +179,14 @@ function parsearProceso(texto) {
         // CORRECCIÓN 3: Índices correctos para la línea de totales
         const idxCuenta = campos.findIndex(c => c && c.trim() === '06-02-01-04-01');
         
-        if (idxCuenta >= 0) {
-            totalDebitos = parsearMonto(campos[idxCuenta + 2]);   // Era +3 ❌
-            totalCreditos = parsearMonto(campos[idxCuenta + 3]); // Era +4 ❌
-            saldoFinal = parsearMonto(campos[idxCuenta + 4]);    // Era +5 ❌
-            console.log(`[PROCESO] Totales: deb=${totalDebitos} cred=${totalCreditos} saldo=${saldoFinal}`);
-            continue;
-        }
+       if (idxCuenta >= 0) {
+    // CORRECCIÓN: Los índices correctos son +2, +3, +4 (NO +3, +4, +5)
+    totalDebitos = parsearMonto(campos[idxCuenta + 2]);   // Cambiar de +3 a +2
+    totalCreditos = parsearMonto(campos[idxCuenta + 3]); // Cambiar de +4 a +3
+    saldoFinal = parsearMonto(campos[idxCuenta + 4]);    // Cambiar de +5 a +4
+    console.log(`[PROCESO] Totales: deb=${totalDebitos} cred=${totalCreditos} saldo=${saldoFinal}`);
+    continue;
+}
         
         // CORRECCIÓN 4: Búsqueda robusta de fecha
         const idxFecha = campos.findIndex(c => c && /^\d{2}-\d{2}-\d{4}$/.test(c.trim()));
