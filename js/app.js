@@ -24,7 +24,7 @@ const parsearMonto = (str) => {
 };
 
 // ============================================
-// PARSER: OBRA.TXT (CORREGIDO)
+// PARSER: OBRA.TXT
 // ============================================
 function parsearObra(texto) {
     console.log('[OBRA] Iniciando parseo...');
@@ -36,70 +36,59 @@ function parsearObra(texto) {
 
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
-        const campos = linea.split('\t');
         
-        // Buscar "Monto Total" para encontrar el inicio del contenido variable
-        const idxMontoTotal = campos.findIndex(c => c && c.trim() === 'Monto Total');
+        // Buscar "Monto Total\t" para encontrar el inicio del contenido variable
+        const idxMontoTotal = linea.indexOf('Monto Total\t');
         if (idxMontoTotal < 0) continue;
         
-        // El contenido viene después de "Monto Total"
-        const contenido = campos.slice(idxMontoTotal + 1);
+        // Extraer el contenido después de "Monto Total\t"
+        const contenidoCompleto = linea.substring(idxMontoTotal + 'Monto Total\t'.length);
         
-        // Buscar el primer campo significativo (que no sea info repetida)
-        let idxInicio = 0;
-        for (let j = 0; j < contenido.length; j++) {
-            const val = contenido[j] && contenido[j].trim();
-            if (val && !val.includes('COSTOS DE OBRA') && !val.includes('Monto:') && 
-                !val.includes('COSTOS DE PROYECTO') && !val.includes('ALTAMIRA') &&
-                val !== 'Movimiento' && val !== 'Código' && val !== 'Fecha' &&
-                val !== 'Cantidad' && val !== 'Unidad' && val !== 'Monto Total' &&
-                val !== 'Monto Unitario' && val !== 'Detalle') {
-                idxInicio = j;
-                break;
-            }
-        }
+        // Buscar "COSTOS DE OBRA" para encontrar el final del contenido variable
+        const idxFin = contenidoCompleto.indexOf('\tCOSTOS DE OBRA');
+        const contenidoVariable = idxFin >= 0 ? 
+            contenidoCompleto.substring(0, idxFin) : 
+            contenidoCompleto;
         
-        const primerCampo = contenido[idxInicio] && contenido[idxInicio].trim();
+        // Dividir por tabs
+        const campos = contenidoVariable.split('\t').map(c => c.trim());
         
-        if (!primerCampo) continue;
+        if (campos.length < 6) continue;
+        
+        const primerCampo = campos[0];
         
         // Detectar si es movimiento o categoría
         if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ"ÓN'].includes(primerCampo)) {
             // MOVIMIENTO: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNITARIO
             const tipo = primerCampo;
-            const codigo = contenido[idxInicio + 1] && contenido[idxInicio + 1].trim();
-            const fecha = contenido[idxInicio + 2] && contenido[idxInicio + 2].trim();
-            const cantidadStr = contenido[idxInicio + 3] && contenido[idxInicio + 3].trim();
-            const unidad = contenido[idxInicio + 4] && contenido[idxInicio + 4].trim();
-            const montoTotalStr = contenido[idxInicio + 5] && contenido[idxInicio + 5].trim();
+            const codigo = campos[1];
+            const fecha = campos[2];
+            const cantidad = parsearMonto(campos[3]);
+            const unidad = campos[4];
+            const montoTotal = parsearMonto(campos[5]);
             
-            const cantidad = parsearMonto(cantidadStr);
-            const montoTotal = parsearMonto(montoTotalStr);
+            console.log(`[OBRA] Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
             
             if (categoriaActual) {
                 categoriaActual.movimientos.push({
                     tipo, codigo, fecha, cantidad, unidad, montoTotal
                 });
-                console.log(`[OBRA] Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
             }
         } else if (/^\d+$/.test(primerCampo)) {
             // CATEGORÍA: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
             const codigo = primerCampo;
-            const nombre = contenido[idxInicio + 1] && contenido[idxInicio + 1].trim();
-            const cantidadStr = contenido[idxInicio + 2] && contenido[idxInicio + 2].trim();
-            const unidad = contenido[idxInicio + 3] && contenido[idxInicio + 3].trim();
-            const montoUnitarioStr = contenido[idxInicio + 4] && contenido[idxInicio + 4].trim();
-            const montoTotalStr = contenido[idxInicio + 5] && contenido[idxInicio + 5].trim();
+            const nombre = campos[1];
+            const cantidad = parsearMonto(campos[2]);
+            const unidad = campos[3];
+            const montoUnitario = parsearMonto(campos[4]);
+            const montoTotal = parsearMonto(campos[5]);
             
-            const cantidad = parsearMonto(cantidadStr);
-            const montoUnitario = parsearMonto(montoUnitarioStr);
-            const montoTotal = parsearMonto(montoTotalStr);
+            console.log(`[OBRA] Categoría: ${codigo} - ${nombre} (total: ${montoTotal})`);
             
             categoriaActual = {
                 codigo, nombre, cantidad, unidad, montoUnitario, montoTotal, movimientos: []
             };
             categorias.push(categoriaActual);
-            console.log(`[OBRA] Categoría: ${codigo} - ${nombre} (total: ${montoTotal})`);
         }
     }
 
@@ -110,7 +99,7 @@ function parsearObra(texto) {
 }
 
 // ============================================
-// PARSER: PROCESO.TXT (CORREGIDO)
+// PARSER: PROCESO.TXT
 // ============================================
 function parsearProceso(texto) {
     console.log('[PROCESO] Iniciando parseo...');
@@ -122,37 +111,33 @@ function parsearProceso(texto) {
 
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
-        const campos = linea.split('\t');
         
-        // Buscar "Saldo" para encontrar el inicio del contenido variable
-        const idxSaldo = campos.findIndex(c => c && c.trim() === 'Saldo');
+        // Buscar "Saldo\t" para encontrar el inicio del contenido variable
+        const idxSaldo = linea.indexOf('Saldo\t');
         if (idxSaldo < 0) continue;
         
-        // El contenido viene después de "Saldo"
-        const contenido = campos.slice(idxSaldo + 1);
+        // Extraer el contenido después de "Saldo\t"
+        const contenidoCompleto = linea.substring(idxSaldo + 'Saldo\t'.length);
         
-        // Buscar el primer campo significativo
-        let idxInicio = 0;
-        for (let j = 0; j < contenido.length; j++) {
-            const val = contenido[j] && contenido[j].trim();
-            if (val && !val.includes('Total') && !val.includes('Acumulado') && 
-                val !== 'Cuenta Contable' && val !== 'Descripción' && 
-                val !== 'Débitos' && val !== 'Créditos') {
-                idxInicio = j;
-                break;
-            }
-        }
+        // Buscar "Total Saldo Anterior" para encontrar el final del contenido variable
+        const idxFin = contenidoCompleto.indexOf('\tTotal Saldo Anterior');
+        const contenidoVariable = idxFin >= 0 ? 
+            contenidoCompleto.substring(0, idxFin) : 
+            contenidoCompleto;
         
-        const primerCampo = contenido[idxInicio] && contenido[idxInicio].trim();
+        // Dividir por tabs
+        const campos = contenidoVariable.split('\t').map(c => c.trim());
         
-        if (!primerCampo) continue;
+        if (campos.length < 5) continue;
+        
+        const primerCampo = campos[0];
         
         // Línea de totales de la cuenta
         if (primerCampo === '06-02-01-04-01') {
             // CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
-            totalDebitos = parsearMonto(contenido[idxInicio + 2]);
-            totalCreditos = parsearMonto(contenido[idxInicio + 3]);
-            saldoFinal = parsearMonto(contenido[idxInicio + 4]);
+            totalDebitos = parsearMonto(campos[2]);
+            totalCreditos = parsearMonto(campos[3]);
+            saldoFinal = parsearMonto(campos[4]);
             console.log(`[PROCESO] Totales: deb=${totalDebitos} cred=${totalCreditos} saldo=${saldoFinal}`);
             continue;
         }
@@ -160,16 +145,17 @@ function parsearProceso(texto) {
         // Asiento: FECHA | NUMERO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
         if (/^\d{2}-\d{2}-\d{4}$/.test(primerCampo)) {
             const fecha = primerCampo;
-            const numero = contenido[idxInicio + 1] && contenido[idxInicio + 1].trim();
-            const descripcion = contenido[idxInicio + 2] && contenido[idxInicio + 2].trim();
-            const debitos = parsearMonto(contenido[idxInicio + 3]);
-            const creditos = parsearMonto(contenido[idxInicio + 4]);
-            const saldo = parsearMonto(contenido[idxInicio + 5]);
+            const numero = campos[1];
+            const descripcion = campos[2];
+            const debitos = parsearMonto(campos[3]);
+            const creditos = parsearMonto(campos[4]);
+            const saldo = parsearMonto(campos[5]);
+            
+            console.log(`[PROCESO] Asiento: ${fecha} #${numero} - ${descripcion.substring(0, 40)}...`);
             
             asientos.push({
                 fecha, numero, descripcion, debitos, creditos, saldo
             });
-            console.log(`[PROCESO] Asiento: ${fecha} #${numero} - ${descripcion.substring(0, 40)}...`);
         }
     }
 
@@ -203,6 +189,8 @@ function compararArchivos(obra, proceso) {
         }
     }
 
+    console.log(`[COMPARACIÓN] Requisiciones en obra: ${reqMap.size}`);
+
     // Extraer de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/i);
@@ -227,6 +215,8 @@ function compararArchivos(obra, proceso) {
         }
     }
 
+    console.log(`[COMPARACIÓN] Total requisiciones únicas: ${reqMap.size}`);
+
     const coincidencias = [];
     const diferencias = [];
     let totalDiferencia = 0;
@@ -241,11 +231,12 @@ function compararArchivos(obra, proceso) {
         }
     }
 
+    console.log(`[COMPARACIÓN] Coincidencias: ${coincidencias.length}, Diferencias: ${diferencias.length}`);
+
     const asientosEspeciales = proceso.asientos.filter(a => 
         !/REQUISICION|DEVOLUCION/i.test(a.descripcion)
     );
-
-    console.log(`[COMPARACIÓN] Total: ${reqMap.size}, Coincidencias: ${coincidencias.length}, Diferencias: ${diferencias.length}`);
+    console.log(`[COMPARACIÓN] Asientos especiales: ${asientosEspeciales.length}`);
 
     return {
         requisiciones: Array.from(reqMap.values()),
