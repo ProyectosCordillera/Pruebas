@@ -24,6 +24,13 @@ const parsearMonto = (str) => {
     return isNaN(num) ? 0 : num;
 };
 
+// Función auxiliar para detectar si un campo es un número (monto)
+const esNumero = (str) => {
+    if (!str) return false;
+    const limpio = String(str).replace(/[₡,\s]/g, '').trim();
+    return limpio !== '' && !isNaN(parseFloat(limpio)) && isFinite(limpio);
+};
+
 // ============================================
 // EXTRAER METADATOS
 // ============================================
@@ -79,19 +86,15 @@ function parsearObra(texto) {
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
         
-        // Buscar la primera ocurrencia de "Monto Total" (headers iniciales)
         const idxMontoTotal1 = linea.indexOf('Monto Total');
         if (idxMontoTotal1 < 0) continue;
         
-        // Buscar la segunda ocurrencia de "Monto Total" (headers finales)
         const idxMontoTotal2 = linea.indexOf('Monto Total', idxMontoTotal1 + 1);
         
-        // El contenido variable está entre la primera y segunda ocurrencia
         let contenidoVariable;
         if (idxMontoTotal2 > 0) {
             contenidoVariable = linea.substring(idxMontoTotal1 + 'Monto Total'.length, idxMontoTotal2);
         } else {
-            // Si no hay segunda ocurrencia, buscar "Movimiento"
             const idxMovimiento = linea.indexOf('Movimiento', idxMontoTotal1);
             if (idxMovimiento > 0) {
                 contenidoVariable = linea.substring(idxMontoTotal1 + 'Monto Total'.length, idxMovimiento);
@@ -100,22 +103,33 @@ function parsearObra(texto) {
             }
         }
         
-        // Limpiar y dividir por tabs
         const campos = contenidoVariable.split('\t').map(c => c.trim()).filter(c => c);
         
         if (campos.length < 6) continue;
         
         const primerCampo = campos[0];
         
-        // Detectar si es movimiento o categoría
-        if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ"ÓN'].includes(primerCampo)) {
-            // MOVIMIENTO: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNITARIO
+        // CORRECCIÓN 1: Lista completa de tipos de movimiento incluyendo variantes de codificación
+        const tiposMovimiento = ['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCION', 
+                                  'DEVOLUCIÃ"N', 'DEVOLUCIÃ“N', 'DEVOLUCIÃ"ÓN'];
+        
+        if (tiposMovimiento.includes(primerCampo)) {
             const tipo = primerCampo;
             const codigo = campos[1];
             const fecha = campos[2];
             const cantidad = parsearMonto(campos[3]);
             const unidad = campos[4];
-            const montoTotal = parsearMonto(campos[5]);
+            
+            // CORRECCIÓN 2: Para SALIDA M.O. el formato es diferente
+            // SALIDA normal:      ... CANTIDAD UND MONTO_TOTAL MONTO_UNIT
+            // SALIDA M.O.:        ... CANTIDAD UND MONTO_UNIT MONTO_TOTAL
+            // Usamos el último campo que sea el monto total en ambos casos
+            let montoTotal;
+            if (tipo === 'SALIDA M.O.') {
+                montoTotal = parsearMonto(campos[campos.length - 1]);
+            } else {
+                montoTotal = parsearMonto(campos[5]);
+            }
             
             console.log(`[OBRA] Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
             
@@ -125,7 +139,6 @@ function parsearObra(texto) {
                 });
             }
         } else if (/^\d+$/.test(primerCampo)) {
-            // CATEGORÍA: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
             const codigo = primerCampo;
             const nombre = campos[1];
             const cantidad = parsearMonto(campos[2]);
@@ -161,52 +174,55 @@ function parsearProceso(texto) {
 
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
+        const campos = linea.split('\t');
         
-        // Buscar "Saldo" en los headers iniciales
-        const idxSaldo = linea.indexOf('Saldo');
-        if (idxSaldo < 0) continue;
+        // CORRECCIÓN 3: Índices correctos para la línea de totales
+        const idxCuenta = campos.findIndex(c => c && c.trim() === '06-02-01-04-01');
         
-        // Buscar "Total Saldo Anterior" para encontrar el final
-        const idxTotalSaldo = linea.indexOf('Total Saldo Anterior');
-        
-        let contenidoVariable;
-        if (idxTotalSaldo > 0) {
-            contenidoVariable = linea.substring(idxSaldo + 'Saldo'.length, idxTotalSaldo);
-        } else {
-            continue;
-        }
-        
-        // Limpiar y dividir por tabs
-        const campos = contenidoVariable.split('\t').map(c => c.trim()).filter(c => c);
-        
-        if (campos.length < 5) continue;
-        
-        const primerCampo = campos[0];
-        
-        // Línea de totales de la cuenta
-        if (primerCampo === '06-02-01-04-01') {
-            // CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
-            totalDebitos = parsearMonto(campos[2]);
-            totalCreditos = parsearMonto(campos[3]);
-            saldoFinal = parsearMonto(campos[4]);
+        if (idxCuenta >= 0) {
+            totalDebitos = parsearMonto(campos[idxCuenta + 2]);   // Era +3 ❌
+            totalCreditos = parsearMonto(campos[idxCuenta + 3]); // Era +4 ❌
+            saldoFinal = parsearMonto(campos[idxCuenta + 4]);    // Era +5 ❌
             console.log(`[PROCESO] Totales: deb=${totalDebitos} cred=${totalCreditos} saldo=${saldoFinal}`);
             continue;
         }
         
-        // Asiento: FECHA | NUMERO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
-        if (/^\d{2}-\d{2}-\d{4}$/.test(primerCampo)) {
-            const fecha = primerCampo;
-            const numero = campos[1];
-            const descripcion = campos[2];
-            const debitos = parsearMonto(campos[3]);
-            const creditos = parsearMonto(campos[4]);
-            const saldo = parsearMonto(campos[5]);
+        // CORRECCIÓN 4: Búsqueda robusta de fecha
+        const idxFecha = campos.findIndex(c => c && /^\d{2}-\d{2}-\d{4}$/.test(c.trim()));
+        
+        if (idxFecha >= 0) {
+            const fecha = campos[idxFecha].trim();
+            const numero = campos[idxFecha + 1] ? campos[idxFecha + 1].trim() : '';
             
-            console.log(`[PROCESO] Asiento: ${fecha} #${numero} - ${descripcion.substring(0, 40)}...`);
+            // CORRECCIÓN 5: Buscar "Total Saldo Anterior" para localizar los montos
+            const idxTotalSaldo = campos.findIndex(c => c && c.includes('Total Saldo Anterior'));
             
-            asientos.push({
-                fecha, numero, descripcion, debitos, creditos, saldo
-            });
+            if (idxTotalSaldo < 3) continue;
+            
+            // Los 3 campos antes de "Total Saldo Anterior:" son: DEBITOS, CREDITOS, SALDO
+            const debitos = parsearMonto(campos[idxTotalSaldo - 3]);
+            const creditos = parsearMonto(campos[idxTotalSaldo - 2]);
+            const saldo = parsearMonto(campos[idxTotalSaldo - 1]);
+            
+            // Construir descripción desde idxFecha+2 hasta los montos
+            const descripcionCampos = campos.slice(idxFecha + 2, idxTotalSaldo - 3);
+            const descripcion = descripcionCampos
+                .map(c => c ? c.trim() : '')
+                .filter(c => c !== '')
+                .join(' ');
+            
+            if (fecha && numero) {
+                console.log(`[PROCESO] Asiento: ${fecha} #${numero} - ${descripcion.substring(0, 40)}... deb=${debitos} cred=${creditos}`);
+                
+                asientos.push({
+                    fecha, 
+                    numero, 
+                    descripcion: descripcion.trim(), 
+                    debitos, 
+                    creditos, 
+                    saldo
+                });
+            }
         }
     }
 
@@ -222,7 +238,6 @@ function compararArchivos(obra, proceso) {
     console.log('[COMPARACIÓN] Iniciando...');
     const reqMap = new Map();
     
-    // Extraer de obra
     for (const cat of obra.categorias) {
         for (const mov of cat.movimientos) {
             const key = mov.codigo;
@@ -242,7 +257,6 @@ function compararArchivos(obra, proceso) {
 
     console.log(`[COMPARACIÓN] Requisiciones en obra: ${reqMap.size}`);
 
-    // Extraer de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/i);
         if (match) {
@@ -324,12 +338,13 @@ function renderizarResultados(resultado) {
     cardDiff.className = 'card shadow-sm h-100 ' + 
         (Math.abs(resultado.totalDiferencia) < 1 ? 'text-bg-success' : 'text-bg-warning');
 
+    // CORRECCIÓN 6: Falta el símbolo ₡ en la diferencia del resumen
     document.getElementById('contenidoResumen').innerHTML = `
         <div class="alerta-info mb-3">
             <h6><i class="bi bi-info-circle"></i> Resumen del Análisis</h6>
             <p class="mb-1">• <strong>Total OBRA:</strong> ₡${formatearMonto(resultado.totalObra)}</p>
             <p class="mb-1">• <strong>Total PROCESO:</strong> ₡${formatearMonto(resultado.totalProceso)}</p>
-            <p class="mb-1">• <strong>Diferencia:</strong> ${formatearMonto(resultado.totalDiferencia)}</p>
+            <p class="mb-1">• <strong>Diferencia:</strong> ₡${formatearMonto(resultado.totalDiferencia)}</p>
             <p class="mb-0">• <strong>Asientos especiales:</strong> ${resultado.asientosEspeciales.length}</p>
         </div>
         ${resultado.asientosEspeciales.length > 0 ? `
@@ -400,7 +415,7 @@ function renderizarResultados(resultado) {
                             <td>${r.categoria}</td>
                             <td class="text-end">₡${formatearMonto(r.montoObra)}</td>
                             <td class="text-end">₡${formatearMonto(r.montoProceso)}</td>
-                            <td class="text-end monto-negativo">${formatearMonto(r.diferencia)}</td>
+                            <td class="text-end monto-negativo">₡${formatearMonto(r.diferencia)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
