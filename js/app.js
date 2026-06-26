@@ -68,6 +68,9 @@ function actualizarTituloProyecto(meta) {
 // ============================================
 // PARSER: OBRA.TXT (CORREGIDO)
 // ============================================
+// ============================================
+// PARSER: OBRA.TXT (CORREGIDO)
+// ============================================
 function parsearObra(texto) {
     console.log('[OBRA] Iniciando parseo...');
     const lineas = texto.split('\n').filter(l => l.trim());
@@ -78,45 +81,47 @@ function parsearObra(texto) {
 
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
+        const campos = linea.split('\t');
         
-        // Buscar "Monto Total\t" para encontrar el inicio del contenido variable
-        const idxMontoTotal = linea.indexOf('Monto Total\t');
-        if (idxMontoTotal < 0) continue;
+        // Buscar el índice de "Monto Total" (el header)
+        const idxMontoTotalHeader = campos.findIndex(c => c.trim() === 'Monto Total');
         
-        // Buscar "\tMovimiento\t" o la segunda "Monto Total" para encontrar el final
-        let idxFin = linea.indexOf('\tMovimiento\t', idxMontoTotal);
-        if (idxFin < 0) {
-            idxFin = linea.indexOf('Monto Total', idxMontoTotal + 1);
-        }
-        if (idxFin < 0) continue;
+        if (idxMontoTotalHeader < 0) continue;
         
-        // Extraer contenido variable
-        const contenidoVariable = linea.substring(idxMontoTotal + 'Monto Total\t'.length, idxFin);
-        const campos = contenidoVariable.split('\t').map(c => c.trim()).filter(c => c);
+        // El contenido variable empieza después del primer "Monto Total"
+        const contenidoVariable = campos.slice(idxMontoTotalHeader + 1);
         
-        if (campos.length < 6) continue;
+        // Buscar dónde termina el contenido (cuando aparece "Movimiento" o "Monto:")
+        let idxFin = contenidoVariable.findIndex(c => 
+            c.trim() === 'Movimiento' || 
+            c.trim() === 'Monto:' || 
+            c.trim() === 'COSTOS DE OBRA'
+        );
         
-        const primerCampo = campos[0];
+        if (idxFin < 0) idxFin = contenidoVariable.length;
         
-        // Lista de tipos de movimiento
-        const tiposMovimiento = ['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCION', 
-                                  'DEVOLUCIÃ"N', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ“N'];
+        const datos = contenidoVariable.slice(0, idxFin).map(c => c.trim()).filter(c => c);
         
-        if (tiposMovimiento.includes(primerCampo)) {
-            // Es un MOVIMIENTO
+        if (datos.length < 5) continue;
+        
+        const primerCampo = datos[0];
+        
+        // Verificar si es un movimiento
+        if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCION', 'DEVOLUCIÃ"N', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ"ÓN'].includes(primerCampo)) {
             const tipo = primerCampo;
-            const codigo = campos[1];
-            const fecha = campos[2];
-            const cantidad = parsearMonto(campos[3]);
-            const unidad = campos[4];
+            const codigo = datos[1];
+            const fecha = datos[2];
+            const cantidad = parsearMonto(datos[3]);
+            const unidad = datos[4];
             
-            // Para SALIDA M.O. el monto total está en campos[6]
-            // Para SALIDA normal y DEVOLUCIÓN está en campos[5]
+            // El monto total puede estar en diferentes posiciones dependiendo del tipo
             let montoTotal;
             if (tipo === 'SALIDA M.O.') {
-                montoTotal = parsearMonto(campos[6]);
+                // SALIDA M.O.: TIPO|CODIGO|FECHA|CANTIDAD|UNIDAD|MONTO_UNIT|MONTO_TOTAL
+                montoTotal = parsearMonto(datos[6]);
             } else {
-                montoTotal = parsearMonto(campos[5]);
+                // SALIDA normal: TIPO|CODIGO|FECHA|CANTIDAD|UNIDAD|MONTO_TOTAL|MONTO_UNIT
+                montoTotal = parsearMonto(datos[5]);
             }
             
             console.log(`[OBRA] Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
@@ -127,13 +132,13 @@ function parsearObra(texto) {
                 });
             }
         } else if (/^\d+$/.test(primerCampo)) {
-            // Es una CATEGORÍA
+            // Es una categoría: CODIGO|NOMBRE|CANTIDAD|UNIDAD|MONTO_UNITARIO|MONTO_TOTAL
             const codigo = primerCampo;
-            const nombre = campos[1];
-            const cantidad = parsearMonto(campos[2]);
-            const unidad = campos[3];
-            const montoUnitario = parsearMonto(campos[4]);
-            const montoTotal = parsearMonto(campos[5]);
+            const nombre = datos[1];
+            const cantidad = parsearMonto(datos[2]);
+            const unidad = datos[3];
+            const montoUnitario = parsearMonto(datos[4]);
+            const montoTotal = parsearMonto(datos[5]);
             
             console.log(`[OBRA] Categoría: ${codigo} - ${nombre} (total: ${montoTotal})`);
             
