@@ -66,10 +66,7 @@ function actualizarTituloProyecto(meta) {
 }
 
 // ============================================
-// PARSER: OBRA.TXT (CORREGIDO)
-// ============================================
-// ============================================
-// PARSER: OBRA.TXT (CORREGIDO)
+// PARSER: OBRA.TXT
 // ============================================
 function parsearObra(texto) {
     console.log('[OBRA] Iniciando parseo...');
@@ -108,14 +105,11 @@ function parsearObra(texto) {
         
         // Verificar si es un movimiento
         if (['SALIDA', 'SALIDA M.O.', 'DEVOLUCIÓN', 'DEVOLUCION', 'DEVOLUCIÃ"N', 'DEVOLUCIÃ"ÓN', 'DEVOLUCIÃ"ÓN'].includes(primerCampo)) {
-            // MOVIMIENTO: TIPO | CODIGO | FECHA | CANTIDAD | UNIDAD | MONTO_TOTAL | MONTO_UNIT
             const tipo = primerCampo;
             const codigo = datos[1];
             const fecha = datos[2];
             const cantidad = parsearMonto(datos[3]);
             const unidad = datos[4];
-            
-            // El monto total está en datos[5]
             const montoTotal = parsearMonto(datos[5]);
             
             console.log(`[OBRA] Movimiento: ${tipo} #${codigo} fecha=${fecha} monto=${montoTotal}`);
@@ -126,7 +120,6 @@ function parsearObra(texto) {
                 });
             }
         } else if (/^\d+$/.test(primerCampo)) {
-            // CATEGORÍA: CODIGO | NOMBRE | CANTIDAD | UNIDAD | MONTO_UNITARIO | MONTO_TOTAL
             const codigo = primerCampo;
             const nombre = datos[1];
             const cantidad = parsearMonto(datos[2]);
@@ -150,7 +143,7 @@ function parsearObra(texto) {
 }
 
 // ============================================
-// PARSER: PROCESO.TXT (CORREGIDO)
+// PARSER: PROCESO.TXT
 // ============================================
 function parsearProceso(texto) {
     console.log('[PROCESO] Iniciando parseo...');
@@ -163,15 +156,12 @@ function parsearProceso(texto) {
     for (let i = 0; i < lineas.length; i++) {
         const linea = lineas[i];
         
-        // Buscar "Saldo\t" para encontrar el inicio del contenido variable
         const idxSaldo = linea.indexOf('Saldo\t');
         if (idxSaldo < 0) continue;
         
-        // Buscar "\tTotal Saldo Anterior:" para encontrar el final
         const idxFin = linea.indexOf('\tTotal Saldo Anterior:');
         if (idxFin < 0) continue;
         
-        // Extraer contenido variable
         const contenidoVariable = linea.substring(idxSaldo + 'Saldo\t'.length, idxFin);
         const campos = contenidoVariable.split('\t').map(c => c.trim());
         
@@ -179,9 +169,7 @@ function parsearProceso(texto) {
         
         const primerCampo = campos[0];
         
-        // Línea de totales de la cuenta
         if (primerCampo === '06-02-01-04-01') {
-            // CODIGO | DESCRIPCION | DEBITOS | CREDITOS | SALDO
             totalDebitos = parsearMonto(campos[2]);
             totalCreditos = parsearMonto(campos[3]);
             saldoFinal = parsearMonto(campos[4]);
@@ -189,12 +177,10 @@ function parsearProceso(texto) {
             continue;
         }
         
-        // Asiento: FECHA | NUMERO | DESCRIPCION | [vacío] | DEBITOS | CREDITOS | SALDO
         if (/^\d{2}-\d{2}-\d{4}$/.test(primerCampo)) {
             const fecha = primerCampo;
             const numero = campos[1];
             const descripcion = campos[2];
-            // campos[3] está vacío, los montos están en [4], [5], [6]
             const debitos = parsearMonto(campos[4]);
             const creditos = parsearMonto(campos[5]);
             const saldo = parsearMonto(campos[6]);
@@ -219,7 +205,6 @@ function compararArchivos(obra, proceso) {
     console.log('[COMPARACIÓN] Iniciando...');
     const reqMap = new Map();
     
-    // Extraer de obra
     for (const cat of obra.categorias) {
         for (const mov of cat.movimientos) {
             const key = mov.codigo;
@@ -239,7 +224,6 @@ function compararArchivos(obra, proceso) {
 
     console.log(`[COMPARACIÓN] Requisiciones en obra: ${reqMap.size}`);
 
-    // Extraer de proceso
     for (const asiento of proceso.asientos) {
         const match = asiento.descripcion.match(/REQUISICION #(\d+)|DEVOLUCION #(\d+)/i);
         if (match) {
@@ -267,7 +251,7 @@ function compararArchivos(obra, proceso) {
 
     const coincidencias = [];
     const diferencias = [];
-    let totalDiferencia = 0;
+    let diferenciaRequisiciones = 0;
 
     for (const [_, req] of reqMap) {
         req.diferencia = Math.abs(req.montoObra - req.montoProceso);
@@ -275,7 +259,7 @@ function compararArchivos(obra, proceso) {
             coincidencias.push(req);
         } else {
             diferencias.push(req);
-            totalDiferencia += (req.montoProceso - req.montoObra);
+            diferenciaRequisiciones += (req.montoProceso - req.montoObra);
         }
     }
 
@@ -286,11 +270,15 @@ function compararArchivos(obra, proceso) {
     );
     console.log(`[COMPARACIÓN] Asientos especiales: ${asientosEspeciales.length}`);
 
+    // Calcular diferencia total REAL entre los totales generales
+    const diferenciaTotal = proceso.saldoFinal - obra.totalGeneral;
+
     return {
         requisiciones: Array.from(reqMap.values()),
         coincidencias,
         diferencias,
-        totalDiferencia,
+        diferenciaRequisiciones, // Diferencia calculada de requisiciones individuales
+        diferenciaTotal, // Diferencia real entre totales generales
         asientosEspeciales,
         totalObra: obra.totalGeneral,
         totalProceso: proceso.saldoFinal
@@ -313,24 +301,25 @@ function renderizarResultados(resultado) {
 
     document.getElementById('totalObra').textContent = '₡' + formatearMonto(resultado.totalObra);
     document.getElementById('totalProceso').textContent = '₡' + formatearMonto(resultado.totalProceso);
-    document.getElementById('totalDiferencia').textContent = '₡' + formatearMonto(resultado.totalDiferencia);
+    document.getElementById('totalDiferencia').textContent = '₡' + formatearMonto(resultado.diferenciaTotal);
     document.getElementById('totalCuadradas').textContent = 
         `${resultado.coincidencias.length} / ${resultado.requisiciones.length}`;
 
     const cardDiff = document.getElementById('cardDiferencia');
     cardDiff.className = 'card shadow-sm h-100 ' + 
-        (Math.abs(resultado.totalDiferencia) < 1 ? 'text-bg-success' : 'text-bg-warning');
+        (Math.abs(resultado.diferenciaTotal) < 1 ? 'text-bg-success' : 'text-bg-warning');
 
     document.getElementById('contenidoResumen').innerHTML = `
         <div class="alerta-info mb-3">
             <h6><i class="bi bi-info-circle"></i> Resumen del Análisis</h6>
             <p class="mb-1">• <strong>Total OBRA:</strong> ₡${formatearMonto(resultado.totalObra)}</p>
             <p class="mb-1">• <strong>Total PROCESO:</strong> ₡${formatearMonto(resultado.totalProceso)}</p>
-            <p class="mb-1">• <strong>Diferencia:</strong> ₡${formatearMonto(resultado.totalDiferencia)}</p>
-            <p class="mb-0">• <strong>Asientos especiales:</strong> ${resultado.asientosEspeciales.length}</p>
+            <p class="mb-1">• <strong>Diferencia Total (Proceso - Obra):</strong> ₡${formatearMonto(resultado.diferenciaTotal)}</p>
+            <p class="mb-1">• <strong>Diferencia de Requisiciones:</strong> ₡${formatearMonto(resultado.diferenciaRequisiciones)}</p>
+            <p class="mb-0">• <strong>Asientos especiales (sin requisición):</strong> ${resultado.asientosEspeciales.length}</p>
         </div>
         ${resultado.asientosEspeciales.length > 0 ? `
-        <h6 class="mt-4">Asientos sin requisición:</h6>
+        <h6 class="mt-4">Asientos sin requisición (origen de la diferencia):</h6>
         <div class="table-responsive">
             <table class="table table-sm table-striped">
                 <thead><tr><th>Fecha</th><th>Descripción</th><th>Débitos</th><th>Créditos</th></tr></thead>
